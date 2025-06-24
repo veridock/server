@@ -104,7 +104,7 @@ run: install frontend check-caddy
 		echo "Starting Caddy server..."; \
 		caddy start --config Caddyfile || caddy run --config Caddyfile & \
 		echo "Starting gRPC server..."; \
-		poetry run python grpc_server.py & \
+		poetry run python -m veridock.grpc_server & \
 		echo "Services started"; \
 	fi
 
@@ -118,7 +118,7 @@ dev: install frontend check-caddy
 		echo "Starting Caddy server in dev mode..."; \
 		caddy run --config Caddyfile --watch & \
 		echo "Starting gRPC server..."; \
-		poetry run python grpc_server.py & \
+		poetry run python -m veridock.grpc_server & \
 		echo "Services started in development mode"; \
 	fi
 
@@ -131,7 +131,7 @@ stop:
 		echo "No stop script found. Using default stop commands..."; \
 		pkill -f "caddy run" || true; \
 		echo "Stopped Caddy server"; \
-		pkill -f "python.*grpc_server.py" || true; \
+		pkill -f "python.*-m veridock.grpc_server" || true; \
 		echo "Stopped gRPC server"; \
 	fi
 
