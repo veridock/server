@@ -54,6 +54,10 @@ test: venv
 install: venv
 	@echo "Installing dependencies..."
 	@$(PIP) install -r requirements.txt
+	@if [ ! -f .env ] && [ -f .env.example ]; then \
+		echo "Copying .env.example to .env"; \
+		cp .env.example .env; \
+	fi
 
 update: venv
 	@echo "Updating dependencies..."
