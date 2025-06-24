@@ -1,263 +1,68 @@
-# Configuration
-VENV = venv
-PYTHON = $(VENV)/bin/python3
-PIP = $(VENV)/bin/pip
-PROTO = service.proto
-PY_OUT = .
-PORT = 8000
-GRPC_PORT = 50051
-OLLAMA_PORT = 11434
-OLLAMA_MODEL = llama2
+# Makefile - Project automation
+.PHONY: help run dev stop clean venv proto test install update
 
-# Detect Python version
-PYTHON_VERSION = $(shell python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+SCRIPTS_DIR := scripts/shared
+VENV := venv
+PYTHON := $(VENV)/bin/python3
+PIP := $(VENV)/bin/pip
 
-# Check if running in a virtual environment
-IS_VENV = $(shell python3 -c 'import sys; print(hasattr(sys, "real_prefix") or (hasattr(sys, "base_prefix") and sys.base_prefix != sys.prefix))')
+.DEFAULT_GOAL := help
 
-# Python executable to use for virtual environment
-PYTHON_EXEC = python3
-
-# Check if we need to use python3.x explicitly
-ifeq ($(shell which python3.10 2>/dev/null),)
-    PYTHON_EXEC = python3
-else
-    PYTHON_EXEC = python3.10
-endif
-
-.PHONY: help
 help:
-	@echo "\n\033[1mMakefile Command Runner\033[0m\n"
-	@echo "\033[1mSetup:\033[0m"
-	@echo "  make venv         Create a Python virtual environment"
-	@echo "  make install      Install Python dependencies"
-	@echo "  make proto        Generate gRPC code"
-	@echo "  make ollama-pull  Download the Ollama model ($(OLLAMA_MODEL))\n"
-	@echo "\033[1mDevelopment:\033[0m"
-	@echo "  make run          Run all services (gRPC, HTTP, Ollama)"
-	@echo "  make run-ollama   Run Ollama service only"
-	@echo "  make run-grpc     Run the gRPC server"
-	@echo "  make run-http     Run the HTTP server (port $(PORT))"
-	@echo "  make stop         Stop all running services\n"
-	@echo "\033[1mTesting:\033[0m"
-	@echo "  make test         Run tests"
-	@echo "  make generate     Generate command list for web UI\n"
-	@echo "\033[1mMaintenance:\033[0m"
-	@echo "  make clean        Remove generated files"
-	@echo "  make clean-all    Remove virtual environment and generated files"
-	@echo "  make logs         View service logs\n"
-	@echo "Run 'make' to see this help message.\n"
+	@echo "Available targets:"
+	@echo "  run         - Start all services (Ollama, gRPC, Caddy)"
+	@echo "  dev         - Start all services in dev mode (Caddy dev)"
+	@echo "  stop        - Stop all services"
+	@echo "  venv        - Create Python virtual environment"
+	@echo "  proto       - Generate gRPC code from .proto files"
+	@echo "  test        - Run tests"
+	@echo "  install     - Install all dependencies"
+	@echo "  update      - Update all dependencies"
+	@echo "  clean       - Clean up temporary files"
+	@echo "  help        - Show this help message"
 
-.PHONY: venv
-venv:
-	@if [ "$(IS_VENV)" = "False" ]; then \
-		echo "Creating Python virtual environment..."; \
-		$(PYTHON_EXEC) -m venv $(VENV); \
-		$(PIP) install --upgrade pip; \
-		$(PIP) install -r requirements.txt; \
-		echo "Virtual environment created. Activate with: source $(VENV)/bin/activate"; \
-	else \
-		echo "Already in a virtual environment"; \
-	fi
+run: venv
+	@$(SCRIPTS_DIR)/services.sh start
 
-.PHONY: install
-install: venv
-	@echo "Installation complete. Run 'source $(VENV)/bin/activate' to activate the virtual environment."
+dev: venv
+	@$(SCRIPTS_DIR)/services.sh dev
 
-# Install Go tools if Go is available
-.PHONY: install-go-tools
-install-go-tools:
-	@if command -v go >/dev/null 2>&1; then \
-		echo "Installing Go tools..."; \
-		go install google.golang.org/protobuf/cmd/protoc-gen-go@latest; \
-	else \
-		echo "Go is not installed. Skipping Go tools installation."; \
-	fi
-
-.PHONY: proto
-proto: $(PROTO)
-	@echo "Generating Python gRPC code..."; \
-	$(PYTHON) -m grpc_tools.protoc -I. --python_out=$(PY_OUT) --grpc_python_out=$(PY_OUT) $<
-	@if command -v protoc-gen-go >/dev/null 2>&1; then \
-		echo "Generating Go gRPC code..."; \
-		protoc -I. --go_out=. --go_opt=paths=source_relative \
-		--go-grpc_out=. --go-grpc_opt=paths=source_relative $<; \
-	else \
-		echo "protoc-gen-go not found. Skipping Go code generation."; \
-	fi
-
-.PHONY: run-grpc run-server
-
-run-grpc: run-server
-
-run-server: generate-commands
-	@if pgrep -f "grpc_server.py" > /dev/null; then \
-		echo "gRPC server is already running"; \
-	else \
-		echo "Starting gRPC server..."; \
-		nohup GRPC_PORT=$(GRPC_PORT) $(PYTHON) grpc_server.py > grpc_server.log 2>&1 & \
-		echo "gRPC server started on port $(GRPC_PORT)"; \
-	fi
-
-# Run gRPC server
-server:
-	$(PYTHON_BIN) grpc_server.py
-
-# Run Caddy server
-caddy:
-	caddy run --config Caddyfile
-
-# Clean generated files
-clean:
-	@echo "Cleaning Python cache and generated files..."; \
-	find . -type f -name "*.py[co]" -delete; \
-	find . -type d -name "__pycache__" -exec rm -r {} +; \
-	rm -f service_pb2*.py service_pb2*.pyi service_grpc.py; \
-	rm -f *.pb.go; \
-	rm -f static/commands.js; \
-	echo "Clean complete"
-
-# Run hello example
-hello:
-	echo "Hello from Makefile"
-
-# Show current date
-date:
-	date
-
-# List all files in the current directory
-list-files:
-	@echo "Files in current directory:"
-	@ls -p | grep -v /
-
-# List all directories in the current directory
-list-dirs:
-	@echo "Directories in current directory:"
-	@ls -d */ | sed 's/\/*$$//'
-
-# List files in a specific directory (usage: make list-files-in DIR=path/to/dir)
-list-files-in:
-	@if [ -z "$(DIR)" ]; then \
-		echo "Please specify directory: make list-files-in DIR=path/to/dir"; \
-		false; \
-	else \
-		echo "Files in $(DIR):"; \
-		ls -p "$(DIR)" | grep -v /; \
-	fi
-
-# List subdirectories in a specific directory (usage: make list-dirs-in DIR=path/to/dir)
-list-dirs-in:
-	@if [ -z "$(DIR)" ]; then \
-		echo "Please specify directory: make list-dirs-in DIR=path/to/dir"; \
-		false; \
-	else \
-		echo "Subdirectories in $(DIR):"; \
-		find "$(DIR)" -maxdepth 1 -type d ! -path "$(DIR)" -exec basename {} \;; \
-	fi
-
-
-.PHONY: run-http
-run-http: generate-commands
-	@echo "Starting HTTP server on port $(PORT)..."
-	@$(PYTHON) http_server.py
-
-.PHONY: stop
 stop:
-	@echo "Stopping all services..."
-	@-pkill -f "grpc_server.py" || true
-	@-pkill -f "http_server.py" || true
-	@-pkill -f "ollama serve" || true
-	@echo "All services stopped"
+	@$(SCRIPTS_DIR)/services.sh stop
 
-.PHONY: run-ollama
-run-ollama:
-	@if ! pgrep -f "ollama serve" > /dev/null; then \
-		echo "Starting Ollama service..."; \
-		nohup ollama serve > ollama.log 2>&1 & \
-		echo "Ollama service started on port $(OLLAMA_PORT)"; \
-	else \
-		echo "Ollama service is already running"; \
+venv:
+	@if [ ! -d "$(VENV)" ]; then \
+		echo "Creating Python virtual environment..."; \
+		python3 -m venv $(VENV); \
+		$(PIP) install --upgrade pip; \
+		[ -f requirements.txt ] && $(PIP) install -r requirements.txt || echo "No requirements.txt found"; \
 	fi
 
-.PHONY: ollama-pull
-ollama-pull:
-	@echo "Pulling Ollama model: $(OLLAMA_MODEL)"
-	@ollama pull $(OLLAMA_MODEL) || (echo "Failed to pull model. Is Ollama installed and running?"; exit 1)
-
-.PHONY: run
-run: run-ollama run-grpc run-http
-	@echo "All services started:"
-	@echo "- Ollama: http://localhost:$(OLLAMA_PORT)"
-	@echo "- gRPC:   http://localhost:$(GRPC_PORT)"
-	@echo "- HTTP:   http://localhost:$(PORT)"
-
-.PHONY: logs
-logs:
-	@echo "\n=== Service Logs ==="
-	@echo "Ollama logs (last 20 lines):"
-	@tail -n 20 ollama.log 2>/dev/null || echo "No Ollama log file found"
-	@echo "\nUse 'tail -f ollama.log' to follow logs"
-
-.PHONY: test test-unit test-http test-grpc test-coverage
-
-# Run all tests
-test: test-unit test-http test-grpc
-
-# Run unit tests
-test-unit:
-	@echo "Running unit tests..."
-	@$(PYTHON) -m pytest tests/unit/ -v
-
-# Run HTTP API tests
-test-http:
-	@echo "Running HTTP API tests..."
-	@$(PYTHON) -m pytest tests/http/ -v
-
-# Run gRPC tests
-test-grpc:
-	@echo "Running gRPC tests..."
-	@$(PYTHON) -m pytest tests/grpc/ -v
-
-# Run tests with coverage report
-test-coverage:
-	@echo "Running tests with coverage..."
-	@$(PYTHON) -m pytest --cov=. --cov-report=term-missing tests/
-
-# Run all tests using the test script
-run-tests: generate-commands
-	@echo "Running all tests using test script..."
-	@./run_tests.sh
-
-.PHONY: generate-commands
-generate-commands:
-	@echo "Generating command list..."; \
-	echo "// Auto-generated list of available Makefile commands" > static/commands.js; \
-	echo "const availableCommands = [" >> static/commands.js; \
-	grep '^\.PHONY:' Makefile | sed 's/^\.PHONY: //' | tr ' ' '\n' | grep -v '^\s*$$' | grep -v '^_' | sort | \
-	sed "s/^/  '/" | sed "s/$$/',/" >> static/commands.js; \
-	sed -i '$$ s/,\s*$$//' static/commands.js; \
-	echo "\n];" >> static/commands.js; \
-	echo "Command list generated in static/commands.js"
-
-# Alias for clean target
-.PHONY: clear
-clear: clean
-
-# Update the project dependencies
-.PHONY: update
-update:
-	@echo "Updating project dependencies..."
-	@if [ -f "scripts/update.sh" ]; then \
-		echo "Running update script..."; \
-		chmod +x scripts/update.sh; \
-		./scripts/update.sh; \
+proto:
+	@if [ -d "protobuf" ] && [ -n "$$(ls protobuf/*.proto 2>/dev/null)" ]; then \
+		echo "Generating gRPC code..."; \
+		mkdir -p protobuf; \
+		python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. protobuf/*.proto; \
 	else \
-		echo "Update script not found. Updating using pip..."; \
-		$(PIP) install --upgrade -r requirements.txt; \
+		echo "No .proto files found in protobuf/ directory"; \
 	fi
-	@echo "Update complete"
 
-.PHONY: clean-all
-clean-all: clean
-	@echo "Removing virtual environment..."; \
-	rm -rf $(VENV)
+test: venv
+	@echo "Running tests..."
+	@$(PYTHON) -m pytest
+
+install: venv
+	@echo "Installing dependencies..."
+	@$(PIP) install -r requirements.txt
+
+update: venv
+	@echo "Updating dependencies..."
+	@$(PIP) install --upgrade -r requirements.txt
+
+clean:
+	@echo "Cleaning up..."
+	@rm -rf __pycache__ .pytest_cache
+	@find . -name "*.pyc" -delete
+	@find . -name "*.pyo" -delete
+	@find . -name "__pycache__" -delete
+	@rm -f *.log *.pid
