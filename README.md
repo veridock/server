@@ -113,20 +113,160 @@ The gRPC service is defined in `service.proto`. The main service is `MakefileSer
 
 ## Development
 
-1. Make your changes to the code
-2. Run tests:
+### Prerequisites
+
+- Python 3.10 or higher
+- pip (Python package manager)
+- make
+- (Optional) Go 1.16+ (for gRPC code generation)
+
+### Setting Up Development Environment
+
+1. Clone the repository and navigate to the project directory
+2. Create and activate a Python virtual environment:
+   ```bash
+   make venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+3. Install the package in development mode:
+   ```bash
+   pip install -e .[dev]
+   ```
+4. Generate gRPC code:
+   ```bash
+   make proto
+   ```
+5. Install pre-commit hooks (optional but recommended):
+   ```bash
+   pre-commit install
+   ```
+
+### Testing
+
+Run the test suite using pytest:
+
+```bash
+# Run all tests
+make test
+
+# Or run specific test types
+make test-unit     # Unit tests only
+make test-http     # HTTP API tests only
+make test-grpc     # gRPC API tests only
+make test-coverage # Run tests with coverage report
+
+# Run tests with pytest directly
+pytest tests/unit/ -v          # Run unit tests
+pytest tests/http/ -v          # Run HTTP API tests
+pytest tests/grpc/ -v          # Run gRPC API tests
+pytest --cov=. tests/ -v       # Run all tests with coverage
+```
+
+### Code Style and Quality
+
+This project uses several tools to maintain code quality:
+
+- **Black**: Code formatting
+- **isort**: Import sorting
+- **flake8**: Linting
+- **mypy**: Static type checking
+
+Run the following commands to ensure your code follows the style guidelines:
+
+```bash
+# Format code with Black
+black .
+
+# Sort imports with isort
+isort .
+# Run linter
+flake8
+# Run type checking
+mypy .
+```
+
+### Development Workflow
+
+1. Create a new branch for your feature or bugfix:
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+
+2. Make your changes and write tests for new functionality.
+
+3. Run the test suite and code quality checks:
    ```bash
    make test
+   black .
+   isort .
+   flake8
+   mypy .
    ```
-3. Generate updated command list for the web UI:
+
+4. Generate updated command list for the web UI if needed:
    ```bash
    make generate-commands
    ```
-4. Start the development servers:
+
+5. Start the development servers to test your changes:
    ```bash
    make run      # gRPC server
-   make run-http # HTTP server
+   make run-http # HTTP server with web interface
    ```
+
+6. Commit your changes with a descriptive message:
+   ```bash
+   git commit -m "Add feature: your feature description"
+   ```
+
+7. Push your branch and create a pull request.
+
+## Testing Strategy
+
+This project follows a comprehensive testing strategy:
+
+1. **Unit Tests**: Test individual components in isolation
+   - gRPC service methods
+   - HTTP request handlers
+   - Utility functions
+
+2. **Integration Tests**: Test interactions between components
+   - gRPC client-server communication
+   - HTTP API endpoints
+   - Command execution
+
+3. **End-to-End Tests**: Test the complete system
+   - Full workflow from web UI to command execution
+   - Error handling and edge cases
+
+## Project Structure
+
+```
+server/
+├── Makefile           # Main Makefile with project commands
+├── requirements.txt    # Python dependencies
+├── dev-requirements.txt # Development dependencies
+├── setup.py           # Package configuration
+├── pyproject.toml     # Build system and tool configuration
+├── service.proto      # gRPC service definition
+├── grpc_server.py     # gRPC server implementation
+├── http_server.py     # HTTP server with web interface
+├── static/            # Web interface static files
+│   ├── index.html    # Main HTML file
+│   ├── app.js        # Frontend JavaScript
+│   └── commands.js   # Auto-generated command list
+├── tests/             # Test files
+│   ├── conftest.py   # Shared test fixtures
+│   ├── unit/         # Unit tests
+│   │   ├── __init__.py
+│   │   ├── test_http_server.py
+│   │   └── test_makefile_service.py
+│   ├── http/         # HTTP API tests
+│   │   └── test_http.py
+│   └── grpc/         # gRPC API tests
+│       └── test_client.py
+└── scripts/          # Utility scripts
+```
 
 ## License
 
