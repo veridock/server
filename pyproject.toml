@@ -16,10 +16,9 @@ python = "^3.10"
 grpcio = "^1.62.1"
 grpcio-tools = "^1.62.1"
 protobuf = "^4.25.3"
-fastapi = "^0.110.0"
-uvicorn = {extras = ["standard"], version = "^0.27.0"}
 python-dotenv = "^1.0.0"
 requests = "^2.31.0"
+click = "^8.1.7"  # For CLI commands
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"
@@ -27,6 +26,7 @@ pytest-asyncio = "^0.23.0"
 black = "^24.0.0"
 isort = "^5.13.0"
 mypy = "^1.10.0"
+types-requests = "^2.32.4.20250611"
 
 [tool.black]
 line-length = 88

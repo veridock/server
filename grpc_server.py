@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """gRPC server for the Makefile Command Runner."""
 
-import os
-import subprocess
-import signal
-import sys
 import logging
+import os
+import signal
+import subprocess
+import sys
 from concurrent import futures
+
 import grpc
 import service_pb2
 import service_pb2_grpc
@@ -23,7 +24,7 @@ class MakefileService(service_pb2_grpc.MakefileServiceServicer):
         """Run a Makefile command and return the result."""
         try:
             # Build the command to run
-            cmd = ['make']
+            cmd = ["make"]
             if request.command:
                 cmd.append(request.command)
             if request.args:
@@ -33,10 +34,7 @@ class MakefileService(service_pb2_grpc.MakefileServiceServicer):
 
             # Run the command
             result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                cwd=os.getcwd()
+                cmd, capture_output=True, text=True, cwd=os.getcwd()
             )
 
             # Log the result
@@ -48,9 +46,7 @@ class MakefileService(service_pb2_grpc.MakefileServiceServicer):
 
             # Return the response
             return service_pb2.CommandResponse(
-                output=result.stdout,
-                error=result.stderr,
-                return_code=result.returncode
+                output=result.stdout, error=result.stderr, return_code=result.returncode
             )
 
         except Exception as e:
@@ -59,20 +55,17 @@ class MakefileService(service_pb2_grpc.MakefileServiceServicer):
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(error_msg)
             return service_pb2.CommandResponse(
-                output="",
-                error=error_msg,
-                return_code=-1
+                output="", error=error_msg, return_code=-1
             )
 
 
 def serve(port=50051):
     """Start the gRPC server."""
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    service_pb2_grpc.add_MakefileServiceServicer_to_server(
-        MakefileService(), server)
+    service_pb2_grpc.add_MakefileServiceServicer_to_server(MakefileService(), server)
 
     # Listen on the given port
-    server_address = f'[::]:{port}'
+    server_address = f"[::]:{port}"
     server.add_insecure_port(server_address)
 
     # Start the server
@@ -93,12 +86,15 @@ def serve(port=50051):
     server.wait_for_termination()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description='Run the gRPC server for Makefile commands')
-    parser.add_argument('--port', type=int, default=50051,
-                        help='The port to listen on (default: 50051)')
+    parser = argparse.ArgumentParser(
+        description="Run the gRPC server for Makefile commands"
+    )
+    parser.add_argument(
+        "--port", type=int, default=50051, help="The port to listen on (default: 50051)"
+    )
     args = parser.parse_args()
 
     serve(port=args.port)
