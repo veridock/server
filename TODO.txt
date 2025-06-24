@@ -1,0 +1,19 @@
+Jak rozdzielic  Makefile projektu 
+od makefile serwera z grpc?
+jak oddzielic cale srodowisko instalacje od dzialajcego servera?
+Moze zrobic wersje instaalcyjna, ktora utworzy Caddyfile i Makefile?
+A caa plikacja bedzie po prostu paczka python, instalowana a potem przy init, utworzy wsztskie pliki i dopiero uruchomi, a jesli sie nie da to uruchomi te skypty
+jak ma python uruchamiac te skrypty?
+czy mozna skrypty bash ze scripts wlaczyc do projektu i wygenerowac potem , albo uzywac przez makefile?
+
+Czy mona zorbi paczk Makefile?
+
+Jak zainstalowa  instalator srodoiwiska?
+zrobic jako osobny projekt, ktory zainstaluje srodowisko + veridock?
+Zaproponuj jak mona zaimplementowa, czy np rozdizeili sorodowisko do osobnego repozytorium, czy lepiej pobrac cale repozytorium i z niego korzystac przy uruchamianiu 
+czy one liner?
+a osobno instalacja paczki python ?
+
+Trzeba stworzyc osobny plik do komendy veridock, ktora bedzie generowala  przykladowy makefileoraz Caddyfile z .env
+na tej podstawie zadziala dopiero caly projekt i mozna bedzie doawac do makefile nowe komendy, ktore beda obslugiwane na frontendzie
+np nowe uslugi, dostepne przez gRPC jak np: FTP, WEBDAV, SSH do RPI

@@ -1,5 +1,9 @@
 # Makefile - Project automation with Poetry
-.PHONY: help run dev stop clean install update test proto
+.PHONY: help run dev stop clean install update test proto check-poetry check-caddy generate-caddyfile generate-commands hello date
+
+# Load environment variables from .env file
+include .env
+export $(shell sed 's/=.*//' .env)
 
 SCRIPTS_DIR := scripts/shared
 POETRY := poetry
@@ -9,26 +13,25 @@ POETRY := poetry
 help:
 	@echo "Available targets:"
 	@echo "  install     - Install all dependencies using Poetry"
+	@echo "  run         - Start all services"
+	@echo "  dev         - Start development environment"
+	@echo "  stop        - Stop all services"
+	@echo "  clean       - Clean up temporary files"
+	@echo "  update      - Update dependencies"
+	@echo "  test        - Run tests"
+	@echo "  format      - Format code"
+	@echo "  lint        - Lint code"
+	@echo "  typecheck   - Run type checking"
+	@echo "  hello       - Print a hello message"
+	@echo "  date        - Show current date and time"
 
 # Check if Poetry is installed
 check-poetry:
-	@if ! command -v poetry >/dev/null; then \
-		echo "Poetry is not installed. Installing..."; \
-		curl -sSL https://install.python-poetry.org | python3 -; \
-		export PATH="$$HOME/.local/bin:$$PATH"; \
-	fi
+	@$(SCRIPTS_DIR)/check_poetry.sh
 
 # Check if Caddy is installed
 check-caddy:
-	@if ! command -v caddy >/dev/null; then \
-		echo "Caddy is not installed. Installing..."; \
-		sudo apt-get update && sudo apt-get install -y debian-keyring debian-archive-keyring apt-transport-https; \
-		curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg; \
-		curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list; \
-		sudo apt-get update; \
-		sudo apt-get install -y caddy; \
-		sudo systemctl enable --now caddy; \
-	fi
+	@$(SCRIPTS_DIR)/check_caddy.sh
 
 # Install dependencies using Poetry
 install: check-poetry
@@ -41,6 +44,14 @@ update: check-poetry
 	@echo "Updating dependencies..."
 	@poetry update
 	@echo "\n\033[1;32m✓ Dependencies updated successfully!\033[0m"
+
+# Generate Caddyfile from template
+generate-caddyfile: check-poetry
+	@echo "Generating Caddyfile from template..."
+
+# Generate JSON list of available commands
+generate-commands:
+	@echo '{\n  "commands": [\n    { "name": "install", "description": "Install all dependencies using Poetry" },\n    { "name": "run", "description": "Start all services" },\n    { "name": "dev", "description": "Start development environment" },\n    { "name": "stop", "description": "Stop all services" },\n    { "name": "clean", "description": "Clean up temporary files" },\n    { "name": "update", "description": "Update dependencies" },\n    { "name": "test", "description": "Run tests" },\n    { "name": "format", "description": "Format code" },\n    { "name": "lint", "description": "Lint code" },\n    { "name": "typecheck", "description": "Run type checking" },\n    { "name": "hello", "description": "Print a hello message" },\n    { "name": "date", "description": "Show current date and time" },\n    { "name": "generate-commands", "description": "Generate JSON list of available commands" }\n  ]\n}'
 
 # Generate gRPC code
 proto:
@@ -95,45 +106,31 @@ check-ollama:
 	fi
 
 # Service management
-run: install frontend check-caddy
+run: check-poetry check-caddy generate-caddyfile
 	@echo "Starting all services..."
-	@if [ -f "$(SCRIPTS_DIR)/services.sh" ]; then \
-		$(SCRIPTS_DIR)/services.sh start; \
-	else \
-		echo "No services.sh found. Starting default services..."; \
-		echo "Starting Caddy server..."; \
-		caddy start --config Caddyfile || caddy run --config Caddyfile & \
-		echo "Starting gRPC server..."; \
-		poetry run python -m veridock.grpc_server & \
-		echo "Services started"; \
-	fi
+	@echo "Using configuration from .env:"
+	@echo "- HTTP_PORT: $(HTTP_PORT)"
+	@echo "- GRPC_HOST: $(GRPC_HOST)"
+	@echo "- GRPC_PORT: $(GRPC_PORT)"
+	@echo "- HTTP_GATEWAY_HOST: $(HTTP_GATEWAY_HOST)"
+	@echo "- HTTP_GATEWAY_PORT: $(HTTP_GATEWAY_PORT)"
+	@echo ""
+	@$(SCRIPTS_DIR)/start_services.sh
 
-# Development mode with hot-reload
-dev: install frontend check-caddy
+dev: check-poetry generate-caddyfile
 	@echo "Starting development environment..."
-	@if [ -f "$(SCRIPTS_DIR)/services.sh" ]; then \
-		$(SCRIPTS_DIR)/services.sh dev; \
-	else \
-		echo "No services.sh found. Starting default services in dev mode..."; \
-		echo "Starting Caddy server in dev mode..."; \
-		caddy run --config Caddyfile --watch & \
-		echo "Starting gRPC server..."; \
-		poetry run python -m veridock.grpc_server & \
-		echo "Services started in development mode"; \
-	fi
+	@echo "Using configuration from .env:"
+	@echo "- HTTP_PORT: $(HTTP_PORT)"
+	@echo "- GRPC_HOST: $(GRPC_HOST)"
+	@echo "- GRPC_PORT: $(GRPC_PORT)"
+	@echo "- HTTP_GATEWAY_HOST: $(HTTP_GATEWAY_HOST)"
+	@echo "- HTTP_GATEWAY_PORT: $(HTTP_GATEWAY_PORT)"
+	@echo ""
+	@$(SCRIPTS_DIR)/start_dev_services.sh
 
-# Stop all services
 stop:
 	@echo "Stopping all services..."
-	@if [ -f "$(SCRIPTS_DIR)/stop_services.sh" ]; then \
-		$(SCRIPTS_DIR)/stop_services.sh; \
-	else \
-		echo "No stop script found. Using default stop commands..."; \
-		pkill -f "caddy run" || true; \
-		echo "Stopped Caddy server"; \
-		pkill -f "python.*-m veridock.grpc_server" || true; \
-		echo "Stopped gRPC server"; \
-	fi
+	@$(SCRIPTS_DIR)/stop_services.sh
 
 # Clean up
 clean:
@@ -160,3 +157,10 @@ lint:
 # Type check
 typecheck:
 	@$(POETRY) run mypy .
+
+# Utility commands
+hello:
+	@echo "Hello from Makefile"
+
+date:
+	@date

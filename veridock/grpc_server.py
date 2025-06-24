@@ -9,8 +9,8 @@ import sys
 from concurrent import futures
 
 import grpc
-import service_pb2
-import service_pb2_grpc
+from veridock import service_pb2
+from veridock import service_pb2_grpc
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -59,18 +59,32 @@ class MakefileService(service_pb2_grpc.MakefileServiceServicer):
             )
 
 
-def serve(port=50051):
+def serve(host='0.0.0.0', port=50051):
     """Start the gRPC server."""
+    # Load environment variables
+    from dotenv import load_dotenv
+    from pathlib import Path
+    
+    # Load environment variables from .env file
+    env_path = Path(__file__).parent.parent / '.env'
+    load_dotenv(dotenv_path=env_path)
+    
+    # Get configuration from environment variables
+    server_host = os.getenv('GRPC_HOST', host)
+    server_port = int(os.getenv('GRPC_PORT', str(port)))
+    
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     service_pb2_grpc.add_MakefileServiceServicer_to_server(MakefileService(), server)
 
     # Listen on the given port
-    server_address = f"[::]:{port}"
+    server_address = f"{server_host}:{server_port}"
     server.add_insecure_port(server_address)
 
     # Start the server
     server.start()
-    logger.info(f"gRPC server started on port {port}")
+    logger.info(f"gRPC server started on {server_address}")
+    logger.info(f"Environment: {os.getenv('ENVIRONMENT', 'development')}")
+    logger.info(f"Debug mode: {os.getenv('DEBUG', 'False')}")
 
     # Handle graceful shutdown
     def signal_handler(sig, frame):
@@ -89,12 +103,28 @@ def serve(port=50051):
 if __name__ == "__main__":
     import argparse
 
+    # Load environment variables first to set defaults
+    from dotenv import load_dotenv
+    from pathlib import Path
+    
+    env_path = Path(__file__).parent.parent / '.env'
+    load_dotenv(dotenv_path=env_path)
+    
+    # Set default port from environment or use default
+    default_port = int(os.getenv('GRPC_PORT', '50051'))
+    default_host = os.getenv('GRPC_HOST', '0.0.0.0')
+
     parser = argparse.ArgumentParser(
         description="Run the gRPC server for Makefile commands"
     )
     parser.add_argument(
-        "--port", type=int, default=50051, help="The port to listen on (default: 50051)"
+        "--host", type=str, default=default_host, 
+        help=f"The host to bind to (default: {default_host})"
+    )
+    parser.add_argument(
+        "--port", type=int, default=default_port, 
+        help=f"The port to listen on (default: {default_port})"
     )
     args = parser.parse_args()
 
-    serve(port=args.port)
+    serve(host=args.host, port=args.port)

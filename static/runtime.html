@@ -1,0 +1,1443 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG-PWA Runtime - Prototype</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .runtime-container {
+            display: grid;
+            grid-template-areas: 
+                "header header header"
+                "marketplace apps services"
+                "console console console";
+            grid-template-rows: 60px 1fr 200px;
+            grid-template-columns: 1fr 1fr 1fr;
+            height: 100vh;
+            gap: 10px;
+            padding: 10px;
+        }
+
+        .header {
+            grid-area: header;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .status {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.active { background: #4CAF50; }
+        .status-dot.warning { background: #FF9800; }
+        .status-dot.error { background: #F44336; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .marketplace, .apps, .services {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            overflow-y: auto;
+        }
+
+        .marketplace { grid-area: marketplace; }
+        .apps { grid-area: apps; }
+        .services { grid-area: services; }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .app-item, .service-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .app-item:hover, .service-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .app-name, .service-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .app-description, .service-description {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 10px;
+        }
+
+        .app-actions, .service-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            padding: 5px 10px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .btn.primary {
+            background: #4CAF50;
+        }
+
+        .btn.danger {
+            background: #F44336;
+        }
+
+        .console {
+            grid-area: console;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-y: auto;
+        }
+
+        .console-line {
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .console-timestamp {
+            color: #888;
+            font-size: 10px;
+        }
+
+        .console-level {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .console-level.info { background: #2196F3; }
+        .console-level.success { background: #4CAF50; }
+        .console-level.warning { background: #FF9800; }
+        .console-level.error { background: #F44336; }
+
+        .app-window {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 80%;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+        }
+
+        .app-window.active {
+            display: flex;
+        }
+
+        .app-window-header {
+            background: #f5f5f5;
+            padding: 15px 20px;
+            border-radius: 15px 15px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .app-window-title {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .app-window-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .app-window-btn {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+        }
+
+        .app-window-btn.close { background: #ff5f57; }
+        .app-window-btn.minimize { background: #ffbd2e; }
+        .app-window-btn.maximize { background: #28ca42; }
+
+        .app-window-content {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .app-window-content iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .install-zone {
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .install-zone.dragover {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+
+        .mcp-server {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .mcp-status {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .mcp-status.connected { background: #4CAF50; }
+        .mcp-status.connecting { background: #FF9800; }
+        .mcp-status.disconnected { background: #F44336; }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            color: white;
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="runtime-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">🚀 SVG-PWA Runtime v2.0</div>
+            <div class="status">
+                <div class="status-item">
+                    <div class="status-dot active"></div>
+                    <span>Runtime</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-dot active"></div>
+                    <span>MCP</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-dot warning"></div>
+                    <span>Audio</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-dot active"></div>
+                    <span>Network</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Marketplace -->
+        <div class="marketplace">
+            <div class="section-title">
+                🏪 Marketplace
+            </div>
+            
+            <div class="install-zone" id="installZone">
+                <div>📁 Przeciągnij plik .svg lub kliknij aby wybrać</div>
+                <input type="file" id="fileInput" class="file-input" accept=".svg" multiple>
+                <div class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                    Wybierz pliki SVG-PWA
+                </div>
+            </div>
+
+            <div class="app-item">
+                <div class="app-name">📊 Advanced Calculator</div>
+                <div class="app-description">Naukowy kalkulator z historią i eksportem</div>
+                <div class="app-actions">
+                    <button class="btn primary" onclick="installApp('calculator')">Install</button>
+                    <button class="btn">Preview</button>
+                </div>
+            </div>
+
+            <div class="app-item">
+                <div class="app-name">🎮 Chess Master</div>
+                <div class="app-description">Szachy z AI przeciwnikiem przez MCP</div>
+                <div class="app-actions">
+                    <button class="btn primary" onclick="installApp('chess')">Install</button>
+                    <button class="btn">Preview</button>
+                </div>
+            </div>
+
+            <div class="app-item">
+                <div class="app-name">📝 Smart Notepad</div>
+                <div class="app-description">Notatnik z AI asystentem i cloud sync</div>
+                <div class="app-actions">
+                    <button class="btn primary" onclick="installApp('notepad')">Install</button>
+                    <button class="btn">Preview</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Running Apps -->
+        <div class="apps">
+            <div class="section-title">
+                📱 Running Apps
+            </div>
+
+            <div id="runningAppsList">
+                <div class="app-item">
+                    <div class="app-name">System Monitor</div>
+                    <div class="app-description">Uruchomiony: 2 min temu</div>
+                    <div class="app-actions">
+                        <button class="btn" onclick="focusApp('system-monitor')">Focus</button>
+                        <button class="btn danger" onclick="closeApp('system-monitor')">Close</button>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <div class="section-title">🔧 Quick Actions</div>
+                <button class="btn primary" onclick="openFileManager()" style="width: 100%; margin-bottom: 10px;">
+                    📁 File Manager
+                </button>
+                <button class="btn primary" onclick="openTerminal()" style="width: 100%; margin-bottom: 10px;">
+                    💻 Terminal
+                </button>
+                <button class="btn primary" onclick="openAIAssistant()" style="width: 100%;">
+                    🤖 AI Assistant
+                </button>
+            </div>
+        </div>
+
+        <!-- Services -->
+        <div class="services">
+            <div class="section-title">
+                🤖 MCP Services
+            </div>
+
+            <div class="service-item">
+                <div class="mcp-server">
+                    <div>
+                        <div class="service-name">🧠 Local LLM</div>
+                        <div class="service-description">Ollama Llama 3.2</div>
+                    </div>
+                    <div class="mcp-status connected">Connected</div>
+                </div>
+                <div class="service-actions">
+                    <button class="btn" onclick="testMCPService('llm')">Test</button>
+                    <button class="btn" onclick="configureMCPService('llm')">Config</button>
+                </div>
+            </div>
+
+            <div class="service-item">
+                <div class="mcp-server">
+                    <div>
+                        <div class="service-name">📁 File Tools</div>
+                        <div class="service-description">System file operations</div>
+                    </div>
+                    <div class="mcp-status connected">Connected</div>
+                </div>
+                <div class="service-actions">
+                    <button class="btn" onclick="testMCPService('files')">Test</button>
+                    <button class="btn" onclick="configureMCPService('files')">Config</button>
+                </div>
+            </div>
+
+            <div class="service-item">
+                <div class="mcp-server">
+                    <div>
+                        <div class="service-name">🎵 Audio Engine</div>
+                        <div class="service-description">WebRTC Audio Gateway</div>
+                    </div>
+                    <div class="mcp-status connecting">Connecting</div>
+                </div>
+                <div class="service-actions">
+                    <button class="btn" onclick="testMCPService('audio')">Test</button>
+                    <button class="btn" onclick="configureMCPService('audio')">Config</button>
+                </div>
+            </div>
+
+            <div class="service-item">
+                <div class="mcp-server">
+                    <div>
+                        <div class="service-name">🌐 Network Proxy</div>
+                        <div class="service-description">CORS bypass service</div>
+                    </div>
+                    <div class="mcp-status connected">Connected</div>
+                </div>
+                <div class="service-actions">
+                    <button class="btn" onclick="testMCPService('network')">Test</button>
+                    <button class="btn" onclick="configureMCPService('network')">Config</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Console -->
+        <div class="console" id="console">
+            <div class="console-line">
+                <span class="console-timestamp">12:34:56</span>
+                <span class="console-level info">INFO</span>
+                <span>SVG-PWA Runtime initialized successfully</span>
+            </div>
+            <div class="console-line">
+                <span class="console-timestamp">12:34:57</span>
+                <span class="console-level success">MCP</span>
+                <span>Connected to local LLM server (Ollama)</span>
+            </div>
+            <div class="console-line">
+                <span class="console-timestamp">12:34:58</span>
+                <span class="console-level success">MCP</span>
+                <span>Connected to file-tools server</span>
+            </div>
+            <div class="console-line">
+                <span class="console-timestamp">12:34:59</span>
+                <span class="console-level warning">AUDIO</span>
+                <span>WebRTC Gateway not found, using browser fallback</span>
+            </div>
+            <div class="console-line">
+                <span class="console-timestamp">12:35:00</span>
+                <span class="console-level success">NET</span>
+                <span>Network proxy started on localhost:9999</span>
+            </div>
+            <div class="console-line">
+                <span class="console-timestamp">12:35:01</span>
+                <span class="console-level info">READY</span>
+                <span>Runtime ready for app execution</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- App Window -->
+    <div class="app-window" id="appWindow">
+        <div class="app-window-header">
+            <div class="app-window-title" id="appWindowTitle">Application</div>
+            <div class="app-window-controls">
+                <button class="app-window-btn minimize" onclick="minimizeApp()"></button>
+                <button class="app-window-btn maximize" onclick="maximizeApp()"></button>
+                <button class="app-window-btn close" onclick="closeAppWindow()"></button>
+            </div>
+        </div>
+        <div class="app-window-content">
+            <iframe id="appFrame" src=""></iframe>
+        </div>
+    </div>
+
+    <script>
+        class SVGPWARuntime {
+            constructor() {
+                this.apps = new Map();
+                this.services = new Map();
+                this.mcpConnections = new Map();
+                this.runningApps = new Map();
+                
+                this.initializeRuntime();
+                this.setupEventListeners();
+                this.startServices();
+            }
+
+            initializeRuntime() {
+                this.log('info', 'Initializing SVG-PWA Runtime...');
+                
+                // Mock MCP services
+                this.registerMCPService('llm', {
+                    name: 'Local LLM',
+                    status: 'connected',
+                    capabilities: ['generate-text', 'analyze-code', 'chat']
+                });
+                
+                this.registerMCPService('files', {
+                    name: 'File Tools',
+                    status: 'connected',
+                    capabilities: ['read-file', 'write-file', 'list-dir']
+                });
+                
+                this.registerMCPService('audio', {
+                    name: 'Audio Engine',
+                    status: 'connecting',
+                    capabilities: ['play-sound', 'record', 'tts']
+                });
+                
+                this.registerMCPService('network', {
+                    name: 'Network Proxy',
+                    status: 'connected',
+                    capabilities: ['fetch-cors', 'websocket-proxy']
+                });
+
+                this.log('success', 'Runtime initialized successfully');
+            }
+
+            setupEventListeners() {
+                // File upload
+                const fileInput = document.getElementById('fileInput');
+                const installZone = document.getElementById('installZone');
+
+                fileInput.addEventListener('change', (e) => {
+                    this.handleFileUpload(e.target.files);
+                });
+
+                // Drag & Drop
+                installZone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    installZone.classList.add('dragover');
+                });
+
+                installZone.addEventListener('dragleave', () => {
+                    installZone.classList.remove('dragover');
+                });
+
+                installZone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    installZone.classList.remove('dragover');
+                    this.handleFileUpload(e.dataTransfer.files);
+                });
+            }
+
+            async handleFileUpload(files) {
+                for (let file of files) {
+                    if (file.name.endsWith('.svg')) {
+                        this.log('info', `Installing app from ${file.name}...`);
+                        await this.installSVGApp(file);
+                    }
+                }
+            }
+
+            async installSVGApp(file) {
+                try {
+                    const content = await this.readFileContent(file);
+                    const parser = new DOMParser();
+                    const svgDoc = parser.parseFromString(content, 'image/svg+xml');
+                    
+                    // Extract app metadata
+                    const appData = this.extractAppMetadata(svgDoc);
+                    appData.content = content;
+                    appData.file = file;
+                    
+                    // Store app
+                    this.apps.set(appData.id, appData);
+                    
+                    this.log('success', `App "${appData.name}" installed successfully`);
+                    this.updateRunningAppsList();
+                    
+                    // Auto-run the app
+                    await this.runApp(appData.id);
+                    
+                } catch (error) {
+                    this.log('error', `Failed to install app: ${error.message}`);
+                }
+            }
+
+            readFileContent(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.onerror = reject;
+                    reader.readAsText(file);
+                });
+            }
+
+            extractAppMetadata(svgDoc) {
+                // Extract metadata from SVG
+                const titleElement = svgDoc.querySelector('title');
+                const runtimeConfig = svgDoc.querySelector('[data-pwa-version]');
+                
+                return {
+                    id: Date.now().toString(),
+                    name: titleElement?.textContent || 'Unnamed App',
+                    version: runtimeConfig?.getAttribute('data-pwa-version') || '1.0',
+                    permissions: this.extractPermissions(svgDoc),
+                    capabilities: this.extractCapabilities(svgDoc)
+                };
+            }
+
+            extractPermissions(svgDoc) {
+                // Mock permission extraction
+                return {
+                    filesystem: { read: true, write: 'home' },
+                    network: { unrestricted: true },
+                    audio: { input: true, output: true },
+                    mcp: { enabled: true }
+                };
+            }
+
+            extractCapabilities(svgDoc) {
+                return ['svg-graphics', 'javascript', 'html-embed'];
+            }
+
+            async runApp(appId) {
+                const app = this.apps.get(appId);
+                if (!app) {
+                    this.log('error', `App ${appId} not found`);
+                    return;
+                }
+
+                this.log('info', `Running app: ${app.name}`);
+                
+                // Create sandboxed environment
+                const appWindow = this.createAppWindow(app);
+                this.runningApps.set(appId, {
+                    app,
+                    window: appWindow,
+                    startTime: Date.now()
+                });
+                
+                this.updateRunningAppsList();
+                this.focusApp(appId);
+            }
+
+            createAppWindow(app) {
+                // Create iframe with app content
+                const iframe = document.getElementById('appFrame');
+                const appWindow = document.getElementById('appWindow');
+                const title = document.getElementById('appWindowTitle');
+                
+                title.textContent = app.name;
+                
+                // Create HTML content for iframe
+                const htmlContent = this.createAppHTML(app);
+                const blob = new Blob([htmlContent], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                
+                iframe.src = url;
+                appWindow.classList.add('active');
+                
+                // Inject runtime APIs into iframe
+                iframe.onload = () => {
+                    try {
+                        iframe.contentWindow.svgPWARuntime = this.createRuntimeAPI(app);
+                        this.log('success', `App "${app.name}" launched successfully`);
+                    } catch (error) {
+                        this.log('warning', 'Could not inject runtime APIs (cross-origin)');
+                    }
+                };
+                
+                return { iframe, url };
+            }
+
+            createAppHTML(app) {
+                // Convert SVG app to full HTML page
+                return `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <title>${app.name}</title>
+                        <style>
+                            body { margin: 0; padding: 0; overflow: hidden; }
+                            svg { width: 100vw; height: 100vh; }
+                        </style>
+                    </head>
+                    <body>
+                        ${app.content}
+                        <script>
+                            // Enhanced error handling
+                            window.addEventListener('error', (e) => {
+                                console.error('App error:', e.error);
+                                if (window.parent && window.parent.runtime) {
+                                    window.parent.runtime.log('error', 'App error: ' + e.error.message);
+                                }
+                            });
+                            
+                            // App lifecycle
+                            console.log('SVG-PWA App loaded:', app.name);
+                        </script>
+                    </body>
+                    </html>
+                `;
+            }
+
+            createRuntimeAPI(app) {
+                return {
+                    app: {
+                        id: app.id,
+                        name: app.name,
+                        permissions: app.permissions
+                    },
+                    
+                    mcp: {
+                        callTool: async (toolName, params) => {
+                            return await this.callMCPTool(toolName, params);
+                        },
+                        
+                        getResource: async (resourceName) => {
+                            return await this.getMCPResource(resourceName);
+                        }
+                    },
+                    
+                    filesystem: {
+                        readFile: async (path) => {
+                            return await this.mockFileRead(path);
+                        },
+                        
+                        writeFile: async (path, content) => {
+                            return await this.mockFileWrite(path, content);
+                        },
+                        
+                        openFileDialog: async () => {
+                            return await this.mockFileDialog();
+                        }
+                    },
+                    
+                    audio: {
+                        playSound: async (source) => {
+                            return await this.mockAudioPlay(source);
+                        },
+                        
+                        record: async () => {
+                            return await this.mockAudioRecord();
+                        }
+                    },
+                    
+                    network: {
+                        fetch: async (url, options) => {
+                            return await this.proxiedFetch(url, options);
+                        }
+                    }
+                };
+            }
+
+            async callMCPTool(toolName, params) {
+                this.log('info', `MCP Tool called: ${toolName}`);
+                
+                // Mock MCP tool responses
+                switch (toolName) {
+                    case 'generate-text':
+                        return { text: `Generated text for: "${params.prompt}"` };
+                    case 'analyze-code':
+                        return { analysis: 'Code looks good!' };
+                    case 'read-file':
+                        return { content: `File content from: ${params.path}` };
+                    default:
+                        return { result: 'Mock tool response' };
+                }
+            }
+
+            async getMCPResource(resourceName) {
+                this.log('info', `MCP Resource requested: ${resourceName}`);
+                return { data: `Mock resource: ${resourceName}` };
+            }
+
+            async mockFileRead(path) {
+                this.log('info', `File read: ${path}`);
+                return `Mock file content from ${path}`;
+            }
+
+            async mockFileWrite(path, content) {
+                this.log('info', `File write: ${path} (${content.length} chars)`);
+                return true;
+            }
+
+            async mockFileDialog() {
+                this.log('info', 'File dialog opened');
+                return '/mock/selected/file.txt';
+            }
+
+            async mockAudioPlay(source) {
+                this.log('info', `Audio play: ${source}`);
+                return true;
+            }
+
+            async mockAudioRecord() {
+                this.log('info', 'Audio recording started');
+                return { stream: 'mock-audio-stream' };
+            }
+
+            async proxiedFetch(url, options) {
+                this.log('info', `Proxied fetch: ${url}`);
+                // In real implementation, this would go through network proxy
+                return await fetch(url, options);
+            }
+
+            registerMCPService(id, service) {
+                this.services.set(id, service);
+                this.log('success', `MCP service registered: ${service.name}`);
+            }
+
+            startServices() {
+                this.log('info', 'Starting system services...');
+                
+                // Mock service startup
+                setTimeout(() => {
+                    this.log('success', 'Network proxy started on localhost:9999');
+                }, 1000);
+                
+                setTimeout(() => {
+                    this.log('warning', 'WebRTC Gateway not found, using browser fallback');
+                }, 1500);
+                
+                setTimeout(() => {
+                    this.log('info', 'Runtime ready for app execution');
+                }, 2000);
+            }
+
+            updateRunningAppsList() {
+                const container = document.getElementById('runningAppsList');
+                container.innerHTML = '';
+                
+                this.runningApps.forEach((runningApp, appId) => {
+                    const uptime = Math.floor((Date.now() - runningApp.startTime) / 1000);
+                    
+                    const appElement = document.createElement('div');
+                    appElement.className = 'app-item';
+                    appElement.innerHTML = `
+                        <div class="app-name">${runningApp.app.name}</div>
+                        <div class="app-description">Uruchomiony: ${uptime}s temu</div>
+                        <div class="app-actions">
+                            <button class="btn" onclick="runtime.focusApp('${appId}')">Focus</button>
+                            <button class="btn danger" onclick="runtime.closeApp('${appId}')">Close</button>
+                        </div>
+                    `;
+                    
+                    container.appendChild(appElement);
+                });
+            }
+
+            focusApp(appId) {
+                const appWindow = document.getElementById('appWindow');
+                appWindow.classList.add('active');
+                
+                const runningApp = this.runningApps.get(appId);
+                if (runningApp) {
+                    document.getElementById('appWindowTitle').textContent = runningApp.app.name;
+                }
+            }
+
+            closeApp(appId) {
+                const runningApp = this.runningApps.get(appId);
+                if (runningApp) {
+                    // Cleanup resources
+                    if (runningApp.window.url) {
+                        URL.revokeObjectURL(runningApp.window.url);
+                    }
+                    
+                    this.runningApps.delete(appId);
+                    this.updateRunningAppsList();
+                    this.closeAppWindow();
+                    
+                    this.log('info', `App "${runningApp.app.name}" closed`);
+                }
+            }
+
+            closeAppWindow() {
+                const appWindow = document.getElementById('appWindow');
+                appWindow.classList.remove('active');
+                
+                const iframe = document.getElementById('appFrame');
+                iframe.src = 'about:blank';
+            }
+
+            minimizeApp() {
+                this.closeAppWindow();
+            }
+
+            maximizeApp() {
+                const appWindow = document.getElementById('appWindow');
+                if (appWindow.style.width === '100%') {
+                    appWindow.style.width = '80%';
+                    appWindow.style.height = '80%';
+                } else {
+                    appWindow.style.width = '100%';
+                    appWindow.style.height = '100%';
+                    appWindow.style.borderRadius = '0';
+                }
+            }
+
+            log(level, message) {
+                const console = document.getElementById('console');
+                const timestamp = new Date().toLocaleTimeString();
+                
+                const logLine = document.createElement('div');
+                logLine.className = 'console-line';
+                logLine.innerHTML = `
+                    <span class="console-timestamp">${timestamp}</span>
+                    <span class="console-level ${level}">${level.toUpperCase()}</span>
+                    <span>${message}</span>
+                `;
+                
+                console.appendChild(logLine);
+                console.scrollTop = console.scrollHeight;
+                
+                // Keep only last 50 log entries
+                while (console.children.length > 50) {
+                    console.removeChild(console.firstChild);
+                }
+            }
+        }
+
+        // Global functions for UI interactions
+        let runtime;
+
+        function installApp(appName) {
+            runtime.log('info', `Installing ${appName} from marketplace...`);
+            
+            // Mock app installation
+            const mockApps = {
+                calculator: createMockCalculatorApp(),
+                chess: createMockChessApp(),
+                notepad: createMockNotepadApp()
+            };
+            
+            const app = mockApps[appName];
+            if (app) {
+                runtime.apps.set(app.id, app);
+                runtime.log('success', `App "${app.name}" installed successfully`);
+                setTimeout(() => runtime.runApp(app.id), 500);
+            }
+        }
+
+        function createMockCalculatorApp() {
+            const calculatorSVG = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="300" height="400" viewBox="0 0 300 400">
+                    <title>Advanced Calculator</title>
+                    <rect width="300" height="400" fill="#2c3e50"/>
+                    <rect x="20" y="20" width="260" height="60" rx="10" fill="#34495e"/>
+                    <text id="display" x="270" y="60" text-anchor="end" fill="#ecf0f1" font-size="24" font-family="monospace">0</text>
+                    
+                    <!-- Calculator buttons -->
+                    <g class="buttons">
+                        <rect x="20" y="100" width="60" height="60" rx="10" fill="#e74c3c" onclick="calculator.clear()"/>
+                        <text x="50" y="140" text-anchor="middle" fill="white" font-size="18">C</text>
+                        
+                        <rect x="90" y="100" width="60" height="60" rx="10" fill="#3498db" onclick="calculator.inputNumber('7')"/>
+                        <text x="120" y="140" text-anchor="middle" fill="white" font-size="18">7</text>
+                        
+                        <rect x="160" y="100" width="60" height="60" rx="10" fill="#3498db" onclick="calculator.inputNumber('8')"/>
+                        <text x="190" y="140" text-anchor="middle" fill="white" font-size="18">8</text>
+                        
+                        <rect x="230" y="100" width="60" height="60" rx="10" fill="#3498db" onclick="calculator.inputNumber('9')"/>
+                        <text x="260" y="140" text-anchor="middle" fill="white" font-size="18">9</text>
+                    </g>
+                    
+                    <script><![CDATA[
+                        class Calculator {
+                            constructor() {
+                                this.display = document.getElementById('display');
+                                this.currentValue = '0';
+                                this.history = [];
+                                
+                                if (window.svgPWARuntime) {
+                                    this.runtime = window.svgPWARuntime;
+                                    this.loadHistory();
+                                }
+                            }
+                            
+                            async loadHistory() {
+                                try {
+                                    const historyData = await this.runtime.filesystem.readFile('calculator-history.json');
+                                    this.history = JSON.parse(historyData);
+                                } catch (error) {
+                                    this.history = [];
+                                }
+                            }
+                            
+                            async saveHistory() {
+                                if (this.runtime) {
+                                    await this.runtime.filesystem.writeFile('calculator-history.json', 
+                                        JSON.stringify(this.history, null, 2));
+                                }
+                            }
+                            
+                            clear() {
+                                this.currentValue = '0';
+                                this.updateDisplay();
+                            }
+                            
+                            inputNumber(num) {
+                                if (this.currentValue === '0') {
+                                    this.currentValue = num;
+                                } else {
+                                    this.currentValue += num;
+                                }
+                                this.updateDisplay();
+                            }
+                            
+                            updateDisplay() {
+                                this.display.textContent = this.currentValue;
+                            }
+                        }
+                        
+                        const calculator = new Calculator();
+                        console.log('Advanced Calculator loaded with SVG-PWA Runtime support');
+                    ]]></script>
+                </svg>
+            `;
+            
+            return {
+                id: 'calc-' + Date.now(),
+                name: 'Advanced Calculator',
+                content: calculatorSVG,
+                permissions: { filesystem: { read: true, write: 'home' } }
+            };
+        }
+
+        function createMockChessApp() {
+            const chessSVG = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="500" height="600" viewBox="0 0 500 600">
+                    <title>Chess Master</title>
+                    <rect width="500" height="600" fill="#1a1a1a"/>
+                    <text x="250" y="40" text-anchor="middle" fill="white" font-size="24">♔ Chess Master</text>
+                    
+                    <!-- Chessboard -->
+                    <g id="chessboard" transform="translate(50, 80)">
+                        <rect width="400" height="400" fill="#8B4513" stroke="#654321" stroke-width="2"/>
+                        <!-- Chess squares would be generated here -->
+                    </g>
+                    
+                    <!-- Game controls -->
+                    <rect x="50" y="500" width="100" height="40" rx="5" fill="#4CAF50" onclick="chess.newGame()"/>
+                    <text x="100" y="525" text-anchor="middle" fill="white" font-size="14">New Game</text>
+                    
+                    <rect x="200" y="500" width="100" height="40" rx="5" fill="#2196F3" onclick="chess.getAIMove()"/>
+                    <text x="250" y="525" text-anchor="middle" fill="white" font-size="14">AI Move</text>
+                    
+                    <script><![CDATA[
+                        class ChessGame {
+                            constructor() {
+                                this.board = this.initializeBoard();
+                                this.currentPlayer = 'white';
+                                
+                                if (window.svgPWARuntime) {
+                                    this.runtime = window.svgPWARuntime;
+                                    this.setupAI();
+                                }
+                                
+                                this.drawBoard();
+                            }
+                            
+                            async setupAI() {
+                                try {
+                                    // Use MCP for AI opponent
+                                    this.aiEnabled = true;
+                                    console.log('Chess AI enabled via MCP');
+                                } catch (error) {
+                                    console.log('Chess AI not available, using random moves');
+                                    this.aiEnabled = false;
+                                }
+                            }
+                            
+                            async getAIMove() {
+                                if (this.runtime && this.aiEnabled) {
+                                    try {
+                                        const move = await this.runtime.mcp.callTool('calculate-chess-move', {
+                                            board: this.board,
+                                            player: this.currentPlayer
+                                        });
+                                        
+                                        console.log('AI suggests move:', move);
+                                        return move;
+                                    } catch (error) {
+                                        console.log('AI move failed, using random');
+                                    }
+                                }
+                                
+                                // Fallback random move
+                                return { from: 'e2', to: 'e4' };
+                            }
+                            
+                            initializeBoard() {
+                                // Standard chess starting position
+                                return [
+                                    ['r','n','b','q','k','b','n','r'],
+                                    ['p','p','p','p','p','p','p','p'],
+                                    ['.','.','.','.','.','.','.'],
+                                    ['.','.','.','.','.','.','.'],
+                                    ['.','.','.','.','.','.','.'],
+                                    ['.','.','.','.','.','.','.'],
+                                    ['P','P','P','P','P','P','P','P'],
+                                    ['R','N','B','Q','K','B','N','R']
+                                ];
+                            }
+                            
+                            drawBoard() {
+                                const board = document.getElementById('chessboard');
+                                
+                                // Clear existing board
+                                while (board.children.length > 1) {
+                                    board.removeChild(board.lastChild);
+                                }
+                                
+                                // Draw squares and pieces
+                                for (let row = 0; row < 8; row++) {
+                                    for (let col = 0; col < 8; col++) {
+                                        const isLight = (row + col) % 2 === 0;
+                                        const square = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                                        square.setAttribute('x', col * 50);
+                                        square.setAttribute('y', row * 50);
+                                        square.setAttribute('width', 50);
+                                        square.setAttribute('height', 50);
+                                        square.setAttribute('fill', isLight ? '#f0d9b5' : '#b58863');
+                                        board.appendChild(square);
+                                        
+                                        // Add piece if present
+                                        const piece = this.board[row][col];
+                                        if (piece !== '.') {
+                                            const pieceText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                                            pieceText.setAttribute('x', col * 50 + 25);
+                                            pieceText.setAttribute('y', row * 50 + 35);
+                                            pieceText.setAttribute('text-anchor', 'middle');
+                                            pieceText.setAttribute('font-size', '30');
+                                            pieceText.textContent = this.getPieceSymbol(piece);
+                                            board.appendChild(pieceText);
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            getPieceSymbol(piece) {
+                                const symbols = {
+                                    'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟',
+                                    'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙'
+                                };
+                                return symbols[piece] || piece;
+                            }
+                            
+                            newGame() {
+                                this.board = this.initializeBoard();
+                                this.currentPlayer = 'white';
+                                this.drawBoard();
+                                console.log('New chess game started');
+                            }
+                        }
+                        
+                        const chess = new ChessGame();
+                        console.log('Chess Master loaded with MCP AI support');
+                    ]]></script>
+                </svg>
+            `;
+            
+            return {
+                id: 'chess-' + Date.now(),
+                name: 'Chess Master',
+                content: chessSVG,
+                permissions: { mcp: { enabled: true }, filesystem: { write: 'home' } }
+            };
+        }
+
+        function createMockNotepadApp() {
+            const notepadSVG = `
+                <svg xmlns="http://www.w3.org/2000/svg" xmlns:xhtml="http://www.w3.org/1999/xhtml" 
+                     width="600" height="500" viewBox="0 0 600 500">
+                    <title>Smart Notepad</title>
+                    <rect width="600" height="500" fill="#f8f9fa"/>
+                    
+                    <!-- Header -->
+                    <rect x="0" y="0" width="600" height="50" fill="#343a40"/>
+                    <text x="20" y="30" fill="white" font-size="18">📝 Smart Notepad</text>
+                    
+                    <!-- Toolbar -->
+                    <rect x="450" y="10" width="60" height="30" rx="5" fill="#28a745" onclick="notepad.save()"/>
+                    <text x="480" y="30" text-anchor="middle" fill="white" font-size="12">Save</text>
+                    
+                    <rect x="520" y="10" width="60" height="30" rx="5" fill="#007bff" onclick="notepad.aiAssist()"/>
+                    <text x="550" y="30" text-anchor="middle" fill="white" font-size="12">AI Help</text>
+                    
+                    <!-- Editor area -->
+                    <foreignObject x="10" y="60" width="580" height="430">
+                        <xhtml:div style="width: 100%; height: 100%; padding: 10px;">
+                            <xhtml:textarea id="editor" 
+                                style="width: 100%; height: 100%; border: 1px solid #ddd; 
+                                       font-family: 'Courier New', monospace; font-size: 14px; 
+                                       padding: 10px; resize: none;"
+                                placeholder="Start typing your notes..."></xhtml:textarea>
+                        </xhtml:div>
+                    </foreignObject>
+                    
+                    <script><![CDATA[
+                        class SmartNotepad {
+                            constructor() {
+                                this.editor = document.getElementById('editor');
+                                this.currentFile = null;
+                                
+                                if (window.svgPWARuntime) {
+                                    this.runtime = window.svgPWARuntime;
+                                    this.setupAutoSave();
+                                    this.loadLastDocument();
+                                }
+                                
+                                this.setupEventListeners();
+                            }
+                            
+                            setupEventListeners() {
+                                this.editor.addEventListener('input', () => {
+                                    this.markAsModified();
+                                });
+                                
+                                // Auto-save every 30 seconds
+                                setInterval(() => {
+                                    if (this.isModified) {
+                                        this.autoSave();
+                                    }
+                                }, 30000);
+                            }
+                            
+                            async loadLastDocument() {
+                                try {
+                                    const content = await this.runtime.filesystem.readFile('notepad-autosave.txt');
+                                    this.editor.value = content;
+                                    console.log('Loaded previous document');
+                                } catch (error) {
+                                    console.log('No previous document found');
+                                }
+                            }
+                            
+                            async save() {
+                                if (this.runtime) {
+                                    try {
+                                        const content = this.editor.value;
+                                        
+                                        if (this.currentFile) {
+                                            await this.runtime.filesystem.writeFile(this.currentFile, content);
+                                        } else {
+                                            this.currentFile = await this.runtime.filesystem.openFileDialog({
+                                                title: 'Save Document',
+                                                defaultName: 'document.txt'
+                                            });
+                                            
+                                            if (this.currentFile) {
+                                                await this.runtime.filesystem.writeFile(this.currentFile, content);
+                                            }
+                                        }
+                                        
+                                        this.isModified = false;
+                                        console.log('Document saved');
+                                        
+                                    } catch (error) {
+                                        console.error('Save failed:', error);
+                                    }
+                                }
+                            }
+                            
+                            async autoSave() {
+                                if (this.runtime && this.editor.value.trim()) {
+                                    try {
+                                        await this.runtime.filesystem.writeFile('notepad-autosave.txt', this.editor.value);
+                                        console.log('Auto-saved');
+                                    } catch (error) {
+                                        console.log('Auto-save failed');
+                                    }
+                                }
+                            }
+                            
+                            async aiAssist() {
+                                if (this.runtime) {
+                                    try {
+                                        const selectedText = this.getSelectedText();
+                                        const prompt = selectedText || 'Help me improve this text: ' + this.editor.value.slice(0, 200);
+                                        
+                                        const response = await this.runtime.mcp.callTool('generate-text', {
+                                            prompt: prompt,
+                                            task: 'improve_writing'
+                                        });
+                                        
+                                        if (selectedText) {
+                                            this.replaceSelectedText(response.text);
+                                        } else {
+                                            this.insertText('\\n\\n--- AI Suggestion ---\\n' + response.text + '\\n--- End Suggestion ---\\n');
+                                        }
+                                        
+                                        console.log('AI assistance provided');
+                                        
+                                    } catch (error) {
+                                        console.log('AI assistance not available');
+                                        this.insertText('\\n[AI assistance not available]\\n');
+                                    }
+                                }
+                            }
+                            
+                            getSelectedText() {
+                                const start = this.editor.selectionStart;
+                                const end = this.editor.selectionEnd;
+                                return this.editor.value.substring(start, end);
+                            }
+                            
+                            replaceSelectedText(text) {
+                                const start = this.editor.selectionStart;
+                                const end = this.editor.selectionEnd;
+                                const before = this.editor.value.substring(0, start);
+                                const after = this.editor.value.substring(end);
+                                this.editor.value = before + text + after;
+                                this.markAsModified();
+                            }
+                            
+                            insertText(text) {
+                                const pos = this.editor.selectionStart;
+                                const before = this.editor.value.substring(0, pos);
+                                const after = this.editor.value.substring(pos);
+                                this.editor.value = before + text + after;
+                                this.markAsModified();
+                            }
+                            
+                            markAsModified() {
+                                this.isModified = true;
+                            }
+                            
+                            setupAutoSave() {
+                                this.isModified = false;
+                            }
+                        }
+                        
+                        const notepad = new SmartNotepad();
+                        console.log('Smart Notepad loaded with AI assistance');
+                    ]]></script>
+                </svg>
+            `;
+            
+            return {
+                id: 'notepad-' + Date.now(),
+                name: 'Smart Notepad',
+                content: notepadSVG,
+                permissions: { 
+                    filesystem: { read: true, write: 'home' },
+                    mcp: { enabled: true }
+                }
+            };
+        }
+
+        function focusApp(appId) {
+            runtime.focusApp(appId);
+        }
+
+        function closeApp(appId) {
+            runtime.closeApp(appId);
+        }
+
+        function closeAppWindow() {
+            runtime.closeAppWindow();
+        }
+
+        function minimizeApp() {
+            runtime.minimizeApp();
+        }
+
+        function maximizeApp() {
+            runtime.maximizeApp();
+        }
+
+        function openFileManager() {
+            runtime.log('info', 'Opening File Manager...');
+            // In real implementation, this would launch a file manager app
+            alert('File Manager would open here (not implemented in prototype)');
+        }
+
+        function openTerminal() {
+            runtime.log('info', 'Opening Terminal...');
+            // In real implementation, this would launch a terminal app
+            alert('Terminal would open here (not implemented in prototype)');
+        }
+
+        function openAIAssistant() {
+            runtime.log('info', 'Opening AI Assistant...');
+            // In real implementation, this would launch an AI chat interface
+            alert('AI Assistant would open here (not implemented in prototype)');
+        }
+
+        function testMCPService(serviceId) {
+            if (typeof runtime !== 'undefined' && runtime.log) {
+                runtime.log('info', `Testing MCP service: ${serviceId}`);
+                
+                setTimeout(() => {
+                    runtime.log('success', `MCP service ${serviceId} test completed successfully`);
+                }, 1000);
+            } else {
+                console.error('Runtime not initialized');
+                alert('Runtime not initialized. Please refresh the page.');
+            }
+        }
+
+        function configureMCPService(serviceId) {
+            runtime.log('info', `Opening configuration for MCP service: ${serviceId}`);
+            alert(`Configuration for ${serviceId} service (not implemented in prototype)`);
+        }
+
+        // Initialize runtime when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            runtime = new SVGPWARuntime();
+            window.runtime = runtime; // Make it globally accessible
+        });
+    </script>
+    
+    <!-- Include commands.js -->
+    <script src="commands.js"></script>
+</body>
+</html>

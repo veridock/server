@@ -4,6 +4,8 @@ venv
 service_pb2.py
 service_pb2_grpc.py
 poetry.lock
+.csm_setup_*
+
 # Logs
 logs
 *.log

@@ -3,12 +3,15 @@
 <head>
     <meta charset="UTF-8" />
     <title>Makefile gRPC Client</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css">
     <style>
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            max-width: 1000px;
             margin: 0 auto;
             padding: 20px;
+            line-height: 1.6;
+            color: #333;
         }
         .container {
             display: flex;
@@ -48,12 +51,56 @@
             background-color: #45a049;
         }
         pre {
-            background-color: #f5f5f5;
-            padding: 10px;
-            border-radius: 4px;
+            background-color: #282c34;
+            padding: 15px;
+            border-radius: 6px;
             min-height: 100px;
-            max-height: 400px;
+            max-height: 500px;
             overflow-y: auto;
+            color: #abb2bf;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            tab-size: 2;
+            line-height: 1.5;
+            margin: 1em 0;
+        }
+
+        .command-output {
+            position: relative;
+        }
+
+        .copy-button {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #abb2bf;
+            padding: 2px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .copy-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .hljs-attr {
+            color: #e06c75;
+        }
+
+        .hljs-string {
+            color: #98c379;
+        }
+
+        .hljs-number {
+            color: #d19a66;
+        }
+
+        .hljs-literal {
+            color: #56b6c2;
         }
     </style>
 </head>
@@ -75,6 +122,8 @@
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/json.min.js"></script>
     <script src="commands.js"></script>
     <script>
         // Populate command list
@@ -102,32 +151,109 @@
             });
         });
 
-        async function runCommand() {
+        function formatOutput(data) {
+            try {
+                // If the output is a JSON string, parse and format it
+                if (typeof data === 'string' && (data.startsWith('{') || data.startsWith('['))) {
+                    const jsonData = JSON.parse(data);
+                    return JSON.stringify(jsonData, null, 2);
+                }
+                return data;
+            } catch (e) {
+                return data;
+            }
+        }
+
+        function createCopyButton(element) {
+            const button = document.createElement('button');
+            button.className = 'copy-button';
+            button.innerHTML = 'Copy';
+            button.onclick = function() {
+                navigator.clipboard.writeText(element.textContent)
+                    .then(() => {
+                        button.textContent = 'Copied!';
+                        setTimeout(() => {
+                            button.textContent = 'Copy';
+                        }, 2000);
+                    });
+                return false;
+            };
+            return button;
+        }
+
+        function runCommand() {
             const command = document.getElementById('command').value.trim();
             if (!command) return;
 
             const output = document.getElementById('output');
-            output.textContent = `Executing: ${command}\n\nLoading...`;
+            output.innerHTML = '';
+            
+            // Create a container for the output
+            const outputContainer = document.createElement('div');
+            outputContainer.className = 'command-output';
+            
+            // Add command info
+            const commandInfo = document.createElement('div');
+            commandInfo.textContent = `$ ${command}`;
+            commandInfo.style.color = '#abb2bf';
+            commandInfo.style.marginBottom = '10px';
+            commandInfo.style.fontFamily = 'Fira Code, monospace';
+            
+            // Create pre element for the output
+            const pre = document.createElement('pre');
+            const code = document.createElement('code');
+            code.className = 'language-json';
+            pre.appendChild(code);
+            
+            // Add loading message
+            code.textContent = 'Running command...';
+            
+            // Add copy button
+            const copyButton = createCopyButton(code);
+            
+            // Append elements
+            outputContainer.appendChild(commandInfo);
+            outputContainer.appendChild(pre);
+            outputContainer.appendChild(copyButton);
+            output.appendChild(outputContainer);
 
-            try {
-                const response = await fetch('/makefile/run_command', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ command })
-                });
-
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-                const data = await response.json();
-                let result = `Command: ${command}\n\n`;
-
-                if (data.output) result += `Output:\n${data.output}\n\n`;
-                if (data.error) result += `Error:\n${data.error}`;
-
-                output.textContent = result || 'No output';
-            } catch (error) {
-                output.textContent = `Error executing command: ${error.message}`;
-            }
+            fetch('/makefile/run_command', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ command: command })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Format the output
+                let formattedOutput = '';
+                if (data.output) {
+                    formattedOutput = formatOutput(data.output);
+                } else {
+                    formattedOutput = formatOutput(JSON.stringify(data, null, 2));
+                }
+                
+                // Update the output with syntax highlighting
+                code.textContent = formattedOutput;
+                hljs.highlightElement(code);
+                
+                // Update copy button to copy the actual output
+                copyButton.onclick = function() {
+                    navigator.clipboard.writeText(formattedOutput)
+                        .then(() => {
+                            copyButton.textContent = 'Copied!';
+                            setTimeout(() => {
+                                copyButton.textContent = 'Copy';
+                            }, 2000);
+                        });
+                    return false;
+                };
+            })
+            .catch(error => {
+                code.textContent = `Error: ${error.message}`;
+                hljs.highlightElement(code);
+            });
         }
     </script>
 </body>

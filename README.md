@@ -1,49 +1,123 @@
-# Makefile Command Runner
+# Veridock Server
 
-A web-based interface for running Makefile commands with gRPC backend.
+A high-performance Makefile command runner with Caddy web server and gRPC backend.
 
 ## Features
 
-- **Web Interface**: Simple and intuitive web UI for running Makefile commands
-- **gRPC Backend**: High-performance gRPC service for command execution
-- **Cross-Platform**: Works on Windows, macOS, and Linux
-- **Docker Support**: Easy deployment with Docker
+- **Modern Architecture**: Caddy web server with gRPC microservices
+- **RESTful API**: HTTP/JSON endpoints for easy integration
+- **High Performance**: Asynchronous gRPC for command execution
+- **Environment-based Configuration**: Easy configuration via `.env` file
+- **Comprehensive Logging**: Built-in request/response logging and debugging
+
+## Architecture
+
+```
+┌─────────────┐     ┌───────────────┐     ┌───────────────┐
+│             │     │               │     │               │
+│   Caddy     │────▶│  HTTP Gateway │────▶│   gRPC Server │
+│  (Port 8088)│     │  (Port 8082)  │     │  (Port 50051) │
+│             │     │               │     │               │
+└─────────────┘     └───────────────┘     └───────────────┘
+```
+
+## Prerequisites
+
+- Python 3.12+
+- Poetry (Python package manager)
+- Make
+- Caddy web server (installed automatically)
 
 ## Quick Start
-
-### Prerequisites
-
-- Python 3.10+
-- make
-- pip (Python package manager)
-
-### Installation
 
 1. Clone the repository:
    ```bash
    git clone <repository-url>
-   cd makefile-command-runner
+   cd veridock/server
    ```
 
-2. Create and activate a virtual environment:
+2. Install dependencies:
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   make install
    ```
 
-3. Install dependencies:
+3. Copy the example environment file and configure as needed:
    ```bash
-   pip install -r requirements.txt
+   cp env.example .env
    ```
 
-### Running the Application
+4. Start all services:
+   ```bash
+   make run
+   ```
 
-Start the gRPC server:
-```bash
-make run
+5. Access the API at `http://localhost:8088`
+
+## Configuration
+
+Configure the services using the `.env` file:
+
+```env
+# Server Configuration
+HTTP_PORT=8088
+
+# gRPC Server
+GRPC_HOST=localhost
+GRPC_PORT=50051
+
+# HTTP Gateway
+HTTP_GATEWAY_HOST=0.0.0.0
+HTTP_GATEWAY_PORT=8082
 ```
 
-Then open `http://localhost:8080` in your web browser.
+## API Endpoints
+
+- `POST /makefile/run_command` - Execute a Makefile command
+  ```json
+  {
+    "command": "help"
+  }
+  ```
+
+- `POST /run_command` - Alternative endpoint (same as above)
+
+## Development
+
+- Start development environment:
+  ```bash
+  make dev
+  ```
+
+- Run tests:
+  ```bash
+  make test
+  ```
+
+- Format code:
+  ```bash
+  make format
+  ```
+
+- Lint code:
+  ```bash
+  make lint
+  ```
+
+## Troubleshooting
+
+Check the following log files for issues:
+- `http_gateway.log` - HTTP gateway logs
+- Caddy logs (output in console)
+- gRPC server logs (output in console)
+
+For debugging, start services with verbose logging:
+```bash
+poetry run python -m veridock.http_gateway --debug
+```
+
+## License
+
+[Your License Here]
 
 ## Documentation
 
