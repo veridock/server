@@ -1,7 +1,19 @@
 :8080 {
+    # Serve static files
     root * ./static
     file_server
 
+    # Ollama API proxy
+    handle_path /api/ollama/* {
+        reverse_proxy http://localhost:11434 {
+            header_up Host {host}
+            header_up X-Real-IP {remote}
+            header_up X-Forwarded-For {remote}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Makefile service proxy
     handle_path /makefile/* {
         reverse_proxy localhost:50051 {
             transport http {
@@ -11,6 +23,7 @@
         }
     }
 
+    # MCP service proxy
     handle_path /mcp/* {
         reverse_proxy localhost:50052 {
             transport http {
@@ -18,5 +31,10 @@
             }
             flush_interval -1
         }
+    }
+
+    # Handle SPA routing - serve index.html for all other routes
+    handle {
+        try_files {path} /index.html
     }
 }

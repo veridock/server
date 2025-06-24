@@ -6,6 +6,8 @@ PROTO = service.proto
 PY_OUT = .
 PORT = 8000
 GRPC_PORT = 50051
+OLLAMA_PORT = 11434
+OLLAMA_MODEL = llama2
 
 # Detect Python version
 PYTHON_VERSION = $(shell python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
@@ -29,17 +31,21 @@ help:
 	@echo "\033[1mSetup:\033[0m"
 	@echo "  make venv         Create a Python virtual environment"
 	@echo "  make install      Install Python dependencies"
-	@echo "  make proto        Generate gRPC code\n"
+	@echo "  make proto        Generate gRPC code"
+	@echo "  make ollama-pull  Download the Ollama model ($(OLLAMA_MODEL))\n"
 	@echo "\033[1mDevelopment:\033[0m"
-	@echo "  make run          Run the gRPC server"
+	@echo "  make run          Run all services (gRPC, HTTP, Ollama)"
+	@echo "  make run-ollama   Run Ollama service only"
+	@echo "  make run-grpc     Run the gRPC server"
 	@echo "  make run-http     Run the HTTP server (port $(PORT))"
-	@echo "  make stop         Stop all running servers\n"
+	@echo "  make stop         Stop all running services\n"
 	@echo "\033[1mTesting:\033[0m"
 	@echo "  make test         Run tests"
 	@echo "  make generate     Generate command list for web UI\n"
 	@echo "\033[1mMaintenance:\033[0m"
 	@echo "  make clean        Remove generated files"
-	@echo "  make clean-all    Remove virtual environment and generated files\n"
+	@echo "  make clean-all    Remove virtual environment and generated files"
+	@echo "  make logs         View service logs\n"
 	@echo "Run 'make' to see this help message.\n"
 
 .PHONY: venv
@@ -80,18 +86,17 @@ proto: $(PROTO)
 		echo "protoc-gen-go not found. Skipping Go code generation."; \
 	fi
 
-.PHONY: run run-server
+.PHONY: run-grpc run-server
 
-run: run-server
+run-grpc: run-server
 
 run-server: generate-commands
 	@if pgrep -f "grpc_server.py" > /dev/null; then \
 		echo "gRPC server is already running"; \
 	else \
 		echo "Starting gRPC server..."; \
-		GRPC_PORT=$(GRPC_PORT) $(PYTHON) grpc_server.py & \
+		nohup GRPC_PORT=$(GRPC_PORT) $(PYTHON) grpc_server.py > grpc_server.log 2>&1 & \
 		echo "gRPC server started on port $(GRPC_PORT)"; \
-		echo "Use 'make stop' to stop the server"; \
 	fi
 
 # Run gRPC server
@@ -158,10 +163,40 @@ run-http: generate-commands
 
 .PHONY: stop
 stop:
-	@echo "Stopping servers..."
+	@echo "Stopping all services..."
 	@-pkill -f "grpc_server.py" || true
 	@-pkill -f "http_server.py" || true
-	@echo "Servers stopped"
+	@-pkill -f "ollama serve" || true
+	@echo "All services stopped"
+
+.PHONY: run-ollama
+run-ollama:
+	@if ! pgrep -f "ollama serve" > /dev/null; then \
+		echo "Starting Ollama service..."; \
+		nohup ollama serve > ollama.log 2>&1 & \
+		echo "Ollama service started on port $(OLLAMA_PORT)"; \
+	else \
+		echo "Ollama service is already running"; \
+	fi
+
+.PHONY: ollama-pull
+ollama-pull:
+	@echo "Pulling Ollama model: $(OLLAMA_MODEL)"
+	@ollama pull $(OLLAMA_MODEL) || (echo "Failed to pull model. Is Ollama installed and running?"; exit 1)
+
+.PHONY: run
+run: run-ollama run-grpc run-http
+	@echo "All services started:"
+	@echo "- Ollama: http://localhost:$(OLLAMA_PORT)"
+	@echo "- gRPC:   http://localhost:$(GRPC_PORT)"
+	@echo "- HTTP:   http://localhost:$(PORT)"
+
+.PHONY: logs
+logs:
+	@echo "\n=== Service Logs ==="
+	@echo "Ollama logs (last 20 lines):"
+	@tail -n 20 ollama.log 2>/dev/null || echo "No Ollama log file found"
+	@echo "\nUse 'tail -f ollama.log' to follow logs"
 
 .PHONY: test test-unit test-http test-grpc test-coverage
 
