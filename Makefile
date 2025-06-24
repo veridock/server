@@ -97,21 +97,42 @@ check-ollama:
 # Service management
 run: install frontend check-caddy
 	@echo "Starting all services..."
-	@$(SCRIPTS_DIR)/services.sh start
+	@if [ -f "$(SCRIPTS_DIR)/services.sh" ]; then \
+		$(SCRIPTS_DIR)/services.sh start; \
+	else \
+		echo "No services.sh found. Starting default services..."; \
+		echo "Starting Caddy server..."; \
+		caddy start --config Caddyfile || caddy run --config Caddyfile & \
+		echo "Starting gRPC server..."; \
+		poetry run python grpc_server.py & \
+		echo "Services started"; \
+	fi
 
 # Development mode with hot-reload
 dev: install frontend check-caddy
 	@echo "Starting development environment..."
-	@$(SCRIPTS_DIR)/services.sh dev
+	@if [ -f "$(SCRIPTS_DIR)/services.sh" ]; then \
+		$(SCRIPTS_DIR)/services.sh dev; \
+	else \
+		echo "No services.sh found. Starting default services in dev mode..."; \
+		echo "Starting Caddy server in dev mode..."; \
+		caddy run --config Caddyfile --watch & \
+		echo "Starting gRPC server..."; \
+		poetry run python grpc_server.py & \
+		echo "Services started in development mode"; \
+	fi
 
 # Stop all services
 stop:
 	@echo "Stopping all services..."
-	@if pgrep -f "uvicorn veridock.main:app" > /dev/null; then \
-		pkill -f "uvicorn veridock.main:app"; \
-		echo "Stopped FastAPI server"; \
+	@if [ -f "$(SCRIPTS_DIR)/stop_services.sh" ]; then \
+		$(SCRIPTS_DIR)/stop_services.sh; \
 	else \
-		echo "No running servers found"; \
+		echo "No stop script found. Using default stop commands..."; \
+		pkill -f "caddy run" || true; \
+		echo "Stopped Caddy server"; \
+		pkill -f "python.*grpc_server.py" || true; \
+		echo "Stopped gRPC server"; \
 	fi
 
 # Clean up
