@@ -94,6 +94,63 @@ run-server: generate-commands
 		echo "Use 'make stop' to stop the server"; \
 	fi
 
+# Run gRPC server
+server:
+	$(PYTHON_BIN) grpc_server.py
+
+# Run Caddy server
+caddy:
+	caddy run --config Caddyfile
+
+# Clean generated files
+clean:
+	@echo "Cleaning Python cache and generated files..."; \
+	find . -type f -name "*.py[co]" -delete; \
+	find . -type d -name "__pycache__" -exec rm -r {} +; \
+	rm -f service_pb2*.py service_pb2*.pyi service_grpc.py; \
+	rm -f *.pb.go; \
+	rm -f static/commands.js; \
+	echo "Clean complete"
+
+# Run hello example
+hello:
+	echo "Hello from Makefile"
+
+# Show current date
+date:
+	date
+
+# List all files in the current directory
+list-files:
+	@echo "Files in current directory:"
+	@ls -p | grep -v /
+
+# List all directories in the current directory
+list-dirs:
+	@echo "Directories in current directory:"
+	@ls -d */ | sed 's/\/*$$//'
+
+# List files in a specific directory (usage: make list-files-in DIR=path/to/dir)
+list-files-in:
+	@if [ -z "$(DIR)" ]; then \
+		echo "Please specify directory: make list-files-in DIR=path/to/dir"; \
+		false; \
+	else \
+		echo "Files in $(DIR):"; \
+		ls -p "$(DIR)" | grep -v /; \
+	fi
+
+# List subdirectories in a specific directory (usage: make list-dirs-in DIR=path/to/dir)
+list-dirs-in:
+	@if [ -z "$(DIR)" ]; then \
+		echo "Please specify directory: make list-dirs-in DIR=path/to/dir"; \
+		false; \
+	else \
+		echo "Subdirectories in $(DIR):"; \
+		find "$(DIR)" -maxdepth 1 -type d ! -path "$(DIR)" -exec basename {} \;; \
+	fi
+
+
 .PHONY: run-http
 run-http: generate-commands
 	@echo "Starting HTTP server on port $(PORT)..."
@@ -147,15 +204,23 @@ generate-commands:
 	echo "\n];" >> static/commands.js; \
 	echo "Command list generated in static/commands.js"
 
-.PHONY: clean
-clean:
-	@echo "Cleaning Python cache and generated files..."; \
-	find . -type f -name "*.py[co]" -delete; \
-	find . -type d -name "__pycache__" -exec rm -r {} +; \
-	rm -f service_pb2*.py service_pb2*.pyi service_grpc.py; \
-	rm -f *.pb.go; \
-	rm -f static/commands.js; \
-	echo "Clean complete"
+# Alias for clean target
+.PHONY: clear
+clear: clean
+
+# Update the project dependencies
+.PHONY: update
+update:
+	@echo "Updating project dependencies..."
+	@if [ -f "scripts/update.sh" ]; then \
+		echo "Running update script..."; \
+		chmod +x scripts/update.sh; \
+		./scripts/update.sh; \
+	else \
+		echo "Update script not found. Updating using pip..."; \
+		$(PIP) install --upgrade -r requirements.txt; \
+	fi
+	@echo "Update complete"
 
 .PHONY: clean-all
 clean-all: clean

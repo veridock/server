@@ -31,6 +31,113 @@ A high-performance gRPC server with Caddy reverse proxy and web interface for th
 └── README.md          # This file
 ```
 
+
+
+    Katalog static/ zawiera pliki frontendowe (HTML, JS, CSS).
+
+    Frontend odwołuje się do /makefile/run_command lub /mcp/run_command na tym samym hoście i porcie.
+
+3. Korzyści takiego podejścia
+
+    Jeden punkt wejścia dla frontendu i backendów.
+
+    Brak problemów z CORS, bo frontend i proxy są na tym samym adresie.
+
+    Transparentność — użytkownik nie musi znać portów backendów.
+
+    Możliwość łatwej rozbudowy o kolejne usługi i ścieżki.
+
+    Serwowanie plików statycznych bez potrzeby osobnego serwera.
+
+4. Alternatywy i narzędzia produkcyjne
+
+    Nginx jako reverse proxy z konfiguracją location do różnych backendów i root do plików statycznych.
+
+    Traefik lub Envoy — nowoczesne proxy z dynamicznym routingiem i obsługą gRPC.
+
+    W przypadku Nginx można użyć proxy_pass do backendów gRPC (z odpowiednią konfiguracją HTTP/2).
+
+5. Podsumowanie
+
+    Ustaw proxy jako reverse proxy z routingiem HTTP do różnych backendów gRPC na różnych portach.
+
+    Serwuj frontend (plik HTML i zasoby) z tego samego proxy.
+
+    Dzięki temu frontend komunikuje się z backendami przez proxy na tym samym hoście i porcie, co upraszcza integrację i eliminuje problemy CORS.
+
+    Proxy działa transparentnie, ukrywając szczegóły portów i protokołów backendów.
+
+Jeśli chcesz, mogę pomóc przygotować przykładową konfigurację Nginx lub rozwinąć proxy w Pythonie z pełną obsługą statycznych plików i routingu.
+
+
+Wyjaśnienia
+
+    root * ./static — katalog z plikami frontendowymi (np. index.html, JS, CSS).
+
+    file_server — serwuje statyczne pliki pod /.
+
+    handle_path /makefile/* — ścieżka proxy do usługi gRPC Makefile działającej na localhost:50051.
+
+    handle_path /mcp/* — ścieżka proxy do usługi MCP/Ollama na localhost:50052.
+
+    transport http { versions h2c 2 } — wymusza HTTP/2 cleartext (h2c) do backendu gRPC bez TLS.
+
+    flush_interval -1 — nie buforuje odpowiedzi, co jest wymagane dla streaming RPC.
+
+Jak to działa z frontendem
+
+    Frontend (np. index.html w ./static) komunikuje się z backendami przez ścieżki /makefile/run_command lub /mcp/run_command.
+
+    Wszystkie żądania idą na ten sam port 8080 i są transparentnie przekazywane do odpowiednich backendów.
+
+    Brak problemów z CORS, bo frontend i proxy są na tym samym hoście i porcie.
+
+Uruchomienie
+
+    Umieść pliki frontendowe w katalogu ./static.
+
+    Uruchom serwery gRPC na portach 50051 (Makefile) i 50052 (MCP).
+
+    Uruchom Caddy z tym Caddyfile:
+
+    text
+    caddy run --config Caddyfile
+
+    Otwórz przeglądarkę na http://localhost:8080 i korzystaj z aplikacji.
+
+Dalsze wskazówki
+
+    Możesz dodać TLS (HTTPS) bardzo łatwo, podając nazwę domeny zamiast :8080.
+
+    Możesz rozbudować routing o kolejne ścieżki i backendy.
+
+    Caddy automatycznie obsługuje HTTP/2 i HTTP/1.1.
+
+    flush_interval -1 jest kluczowe dla poprawnej obsługi gRPC streaming.
+
+Podsumowanie
+
+Caddy 2 to lekki, prosty w konfiguracji serwer, który świetnie nadaje się na reverse proxy dla gRPC i statycznych plików frontendowych. Dzięki powyższej konfiguracji masz:
+
+    Jeden punkt wejścia dla frontendu i wielu backendów gRPC,
+
+    Transparentną komunikację między frontendem a backendami na różnych portach,
+
+    Obsługę gRPC streaming i HTTP/2 cleartext (h2c),
+
+    Proste serwowanie plików PWA.
+
+
+    Caddy serwuje frontend i proxyfikuje gRPC na różne porty,
+
+    Pythonowy serwer gRPC wywołuje komendy Makefile,
+
+    Frontend PWA komunikuje się z backendem przez proxy HTTP,
+
+    Makefile ułatwia generowanie i uruchamianie serwera.
+
+Dzięki temu masz prostą, transparentną i skalowalną architekturę do uruchamiania komend jako usług gRPC dostępnych z przeglądarki.
+
 ## Getting Started
 
 ### 1. Install Dependencies
