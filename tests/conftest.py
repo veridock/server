@@ -56,7 +56,7 @@ def test_grpc_server():
     import grpc
     import service_pb2_grpc
 
-    from grpc_server import MakefileService
+    from veridock.grpc_server import MakefileService
 
     # Create a server
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))

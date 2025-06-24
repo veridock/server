@@ -22,7 +22,7 @@ class TestMakefileService(unittest.TestCase):
         cls.server_port = "50051"
 
         # Import the server module
-        from grpc_server import MakefileService, serve
+        from veridock.grpc_server import MakefileService, serve
 
         # Start the server in a separate thread
         cls.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))

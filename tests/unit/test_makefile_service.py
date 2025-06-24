@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import service_pb2
 
 # Import the service to test
-from grpc_server import MakefileService
+from veridock.grpc_server import MakefileService
 
 
 class TestMakefileService(unittest.TestCase):
