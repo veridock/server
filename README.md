@@ -1,34 +1,72 @@
-# Veridock gRPC Server
+# Makefile Command Runner
 
-A high-performance gRPC server with Caddy reverse proxy and web interface for the Veridock service.
+A web-based interface for running Makefile commands with gRPC backend.
 
 ## Features
 
-- **gRPC Service**: Implements all four gRPC patterns (Unary, Server Streaming, Client Streaming, Bidirectional Streaming)
-- **Caddy Reverse Proxy**: Handles HTTP/2, TLS termination, and WebSockets
-- **Web Interface**: Interactive UI to test all gRPC endpoints
-- **Modern Stack**: Built with Python, gRPC, and modern web technologies
+- **Web Interface**: Simple and intuitive web UI for running Makefile commands
+- **gRPC Backend**: High-performance gRPC service for command execution
+- **Cross-Platform**: Works on Windows, macOS, and Linux
+- **Docker Support**: Easy deployment with Docker
 
-## Prerequisites
+## Quick Start
 
-- Python 3.8+
-- Node.js 14+ (for web interface)
-- Protocol Buffers Compiler (`protoc`)
-- Caddy v2+ (for production deployment)
+### Prerequisites
+
+- Python 3.10+
+- make
+- pip (Python package manager)
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd makefile-command-runner
+   ```
+
+2. Create and activate a virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+### Running the Application
+
+Start the gRPC server:
+```bash
+make run
+```
+
+Then open `http://localhost:8080` in your web browser.
+
+## Documentation
+
+For detailed documentation, please see the [docs](docs/README.md) directory.
+
+- [API Documentation](docs/api/README.md)
+- [Guides](docs/guides/README.md)
+- [Development](docs/guides/README.md#development)
 
 ## Project Structure
 
 ```
-/server
-│
-├── Caddyfile          # Caddy server configuration
-├── Makefile           # Build and development tasks
-├── service.proto      # Protocol Buffers service definition
-├── grpc_server.py     # gRPC server implementation
-├── static/            # Web interface
-│   ├── index.html     # Main web page
-│   └── app.js         # Frontend JavaScript
-└── README.md          # This file
+.
+├── docs/               # Documentation
+├── static/             # Web interface
+│   ├── index.html      # Main web page
+│   └── app.js          # Frontend JavaScript
+├── tests/              # Test files
+├── grpc_server.py      # gRPC server implementation
+├── service.proto       # Protocol Buffers service definition
+├── Makefile            # Build and development tasks
+├── requirements.txt    # Python dependencies
+└── README.md           # This file
 ```
 
 
