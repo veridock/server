@@ -35,7 +35,7 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --cov=. --cov-report=term-missing"
 
-[coverage:run]
+[tool.coverage.run]
 source = ["."]
 omit = [
     "venv/*",
@@ -44,7 +44,7 @@ omit = [
     "*/site-packages/*"
 ]
 
-[coverage:report]
+[tool.coverage.report]
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
