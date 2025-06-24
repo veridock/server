@@ -134,9 +134,10 @@ generate-commands:
 	@echo "Generating command list..."; \
 	echo "// Auto-generated list of available Makefile commands" > static/commands.js; \
 	echo "const availableCommands = [" >> static/commands.js; \
-	grep '^\.PHONY:' Makefile | sed 's/^\.PHONY: //' | tr ' ' '\n' | grep -v '^\s*$$' | sort | \
-	xargs -I {} echo "  '{}'," >> static/commands.js; \
-	echo "];" >> static/commands.js; \
+	grep '^\.PHONY:' Makefile | sed 's/^\.PHONY: //' | tr ' ' '\n' | grep -v '^\s*$$' | grep -v '^_' | sort | \
+	sed "s/^/  '/" | sed "s/$$/',/" >> static/commands.js; \
+	sed -i '$$ s/,\s*$$//' static/commands.js; \
+	echo "\n];" >> static/commands.js; \
 	echo "Command list generated in static/commands.js"
 
 .PHONY: clean
