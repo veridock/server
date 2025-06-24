@@ -80,12 +80,19 @@ proto: $(PROTO)
 		echo "protoc-gen-go not found. Skipping Go code generation."; \
 	fi
 
-.PHONY: run
-run: generate-commands
-	@echo "Starting gRPC server..."
-	@GRPC_PORT=$(GRPC_PORT) $(PYTHON) grpc_server.py &
-	@echo "gRPC server started on port $(GRPC_PORT)"
-	@echo "Use 'make stop' to stop the server"
+.PHONY: run run-server
+
+run: run-server
+
+run-server: generate-commands
+	@if pgrep -f "grpc_server.py" > /dev/null; then \
+		echo "gRPC server is already running"; \
+	else \
+		echo "Starting gRPC server..."; \
+		GRPC_PORT=$(GRPC_PORT) $(PYTHON) grpc_server.py & \
+		echo "gRPC server started on port $(GRPC_PORT)"; \
+		echo "Use 'make stop' to stop the server"; \
+	fi
 
 .PHONY: run-http
 run-http: generate-commands
