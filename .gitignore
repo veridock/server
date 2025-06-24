@@ -3,6 +3,7 @@ venv
 .venv
 service_pb2.py
 service_pb2_grpc.py
+poetry.lock
 # Logs
 logs
 *.log
