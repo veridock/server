@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package makefile;
+
+// The Makefile service definition.
+service MakefileService {
+  // Executes a Makefile command
+  rpc RunCommand (CommandRequest) returns (CommandResponse) {}
+}
+
+// The request message containing the command to run
+message CommandRequest {
+  string command = 1;  // The make command to run (e.g., "test", "clean")
+  repeated string args = 2;  // Optional arguments for the command
+}
+
+// The response message containing the command output
+message CommandResponse {
+  string output = 1;  // Standard output from the command
+  string error = 2;   // Standard error from the command
+  int32 return_code = 3;  // Return code from the command
+}
