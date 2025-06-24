@@ -53,6 +53,8 @@ test: venv
 
 install: venv
 	@echo "Installing dependencies..."
+	@$(PIP) install --upgrade pip setuptools wheel
+	@$(PIP) install --only-binary :all: grpcio==1.73.0 grpcio-tools==1.73.0
 	@$(PIP) install -r requirements.txt
 	@if [ ! -f .env ] && [ -f .env.example ]; then \
 		echo "Copying .env.example to .env"; \
