@@ -28,20 +28,25 @@ A web-based interface for running Makefile commands with a clean, user-friendly 
    cd server
    ```
 
-2. Create and activate a Python virtual environment:
+2. Create and activate a Python 3.11 virtual environment:
    ```bash
-   make venv
+   python3.11 -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
-3. Install dependencies:
+3. Upgrade pip and install build dependencies:
    ```bash
-   make install
+   pip install --upgrade pip setuptools wheel
    ```
 
-4. (Optional) Install Go tools for gRPC code generation:
+4. Install Python dependencies:
    ```bash
-   make install-go-tools
+   pip install -r requirements.txt
+   ```
+
+5. Generate gRPC code:
+   ```bash
+   python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. service.proto
    ```
 
 ## Usage
@@ -59,11 +64,19 @@ http://localhost:8000
 
 ### Running the gRPC Server
 
-```bash
-make run
-```
+1. Start the gRPC server:
+   ```bash
+   python grpc_server.py
+   ```
+   Or using make:
+   ```bash
+   make run
+   ```
 
-The gRPC server will start on port 50051 by default.
+The gRPC server will start on port 50051 by default. You can specify a different port using the `--port` flag:
+   ```bash
+   python grpc_server.py --port 50052
+   ```
 
 ### Available Make Commands
 
@@ -115,28 +128,33 @@ The gRPC service is defined in `service.proto`. The main service is `MakefileSer
 
 ### Prerequisites
 
-- Python 3.10 or higher
+- Python 3.11 or higher
 - pip (Python package manager)
 - make
-- (Optional) Go 1.16+ (for gRPC code generation)
+- g++ or compatible C++ compiler
+- Development headers for Python 3.11
 
 ### Setting Up Development Environment
 
 1. Clone the repository and navigate to the project directory
-2. Create and activate a Python virtual environment:
+2. Create and activate a Python 3.11 virtual environment:
    ```bash
-   make venv
+   python3.11 -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
-3. Install the package in development mode:
+3. Install development dependencies:
    ```bash
-   pip install -e .[dev]
+   pip install -r dev-requirements.txt
    ```
-4. Generate gRPC code:
+4. Install the package in development mode:
    ```bash
-   make proto
+   pip install -e .
    ```
-5. Install pre-commit hooks (optional but recommended):
+5. Generate gRPC code:
+   ```bash
+   python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. service.proto
+   ```
+6. Install pre-commit hooks (optional but recommended):
    ```bash
    pre-commit install
    ```
