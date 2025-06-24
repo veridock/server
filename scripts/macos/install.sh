@@ -131,8 +131,15 @@ main() {
     # Install build tools
     install_build_tools
     
+    # Install Caddy
+    if ! command -v caddy &> /dev/null; then
+        echo -e "\033[1;36mInstalling Caddy server...\033[0m"
+        brew install caddy
+    else
+        echo -e "\033[1;32mCaddy is already installed\033[0m"
+    fi
+    
     # Install services
-    install_caddy
     install_ollama
     
     # Install Python dependencies

@@ -44,25 +44,12 @@ function Install-Chocolatey {
 
 # Function to install Caddy
 function Install-Caddy {
-    if (Test-CommandExists "caddy") {
-        Write-Output "${GREEN}Caddy is already installed.${NC}"
-        caddy version
-        return
+    if (!(Get-Command caddy -ErrorAction SilentlyContinue)) {
+        Write-Host "Installing Caddy server..." -ForegroundColor Cyan
+        choco install caddy -y
+    } else {
+        Write-Host "Caddy is already installed" -ForegroundColor Green
     }
-
-    Write-Section "Installing Caddy"
-    
-    if (-not (Test-CommandExists "choco")) {
-        Write-Output "${YELLOW}Chocolatey is required to install Caddy. Installing Chocolatey first...${NC}"
-        Install-Chocolatey
-    }
-    
-    choco install caddy -y
-    
-    # Refresh environment variables
-    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-    
-    Write-Output "${GREEN}Caddy installed successfully!${NC}"
 }
 
 # Function to install Python

@@ -69,7 +69,8 @@ install_caddy() {
         sudo usermod -aG caddy "$USER"
     fi
 
-    echo -e "${GREEN}Caddy installed successfully!${NC}"}
+    echo -e "${GREEN}Caddy installed successfully!${NC}"
+}
 
 # Function to install Ollama
 install_ollama() {
@@ -156,8 +157,19 @@ main() {
     # Install basic build tools
     install_build_tools
     
+    # Install Caddy
+    if ! command -v caddy &> /dev/null; then
+        echo -e "\033[1;36mInstalling Caddy server...\033[0m"
+        sudo apt-get install -y debian-keyring debian-archive-keyring apt-transport-https
+        curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+        curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+        sudo apt-get update
+        sudo apt-get install caddy -y
+    else
+        echo -e "\033[1;32mCaddy is already installed\033[0m"
+    fi
+    
     # Install services
-    install_caddy
     install_ollama
     
     # Install Python dependencies
