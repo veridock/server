@@ -1,0 +1,22 @@
+:8080 {
+    root * ./static
+    file_server
+
+    handle_path /makefile/* {
+        reverse_proxy localhost:50051 {
+            transport http {
+                versions h2c 2
+            }
+            flush_interval -1
+        }
+    }
+
+    handle_path /mcp/* {
+        reverse_proxy localhost:50052 {
+            transport http {
+                versions h2c 2
+            }
+            flush_interval -1
+        }
+    }
+}
