@@ -1,0 +1,6 @@
+include README.md
+include requirements.txt
+include dev-requirements.txt
+include pytest.ini
+recursive-include static *
+recursive-include tests *.py

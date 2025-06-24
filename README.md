@@ -24,8 +24,8 @@ A web-based interface for running Makefile commands with a clean, user-friendly 
 
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
-   cd veridock/server
+   git clone https://github.com/veridock/server.git
+   cd server
    ```
 
 2. Create and activate a Python virtual environment:

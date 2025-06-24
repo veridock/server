@@ -80,7 +80,8 @@ proto: $(PROTO)
 		echo "protoc-gen-go not found. Skipping Go code generation."; \
 	fi
 
-.PHONY: run	run: generate-commands
+.PHONY: run
+run: generate-commands
 	@echo "Starting gRPC server..."
 	@GRPC_PORT=$(GRPC_PORT) $(PYTHON) grpc_server.py &
 	@echo "gRPC server started on port $(GRPC_PORT)"
