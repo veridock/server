@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SVG-PWA Runtime - Prototype</title>
+    <title>Veridock Runtime Environment</title>
+    <meta name="description" content="Interactive runtime environment for Veridock server">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/json.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -147,37 +151,96 @@
 
         .console {
             grid-area: console;
-            background: rgba(0, 0, 0, 0.3);
+            background: #1e1e1e;
             border-radius: 10px;
             padding: 15px;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-size: 13px;
             overflow-y: auto;
+            color: #d4d4d4;
+            position: relative;
+        }
+
+        .console pre {
+            margin: 0;
+            padding: 0;
+            background: transparent !important;
+        }
+
+        .console code {
+            font-family: inherit;
+            background: transparent !important;
+            padding: 0 !important;
+        }
+
+        .console-actions {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .console-actions button {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #d4d4d4;
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .console-actions button:hover {
+            background: rgba(255, 255, 255, 0.2);
         }
 
         .console-line {
-            margin-bottom: 5px;
+            margin-bottom: 4px;
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             gap: 10px;
+            line-height: 1.4;
+            word-break: break-all;
+        }
+
+        .console-line pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .console-line-content {
+            flex: 1;
+            overflow-x: auto;
         }
 
         .console-timestamp {
-            color: #888;
-            font-size: 10px;
+            color: #6a9955;
+            font-size: 11px;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            white-space: nowrap;
+            opacity: 0.7;
+            margin-top: 2px;
         }
 
         .console-level {
             padding: 2px 6px;
             border-radius: 3px;
-            font-size: 10px;
+            font-size: 11px;
             font-weight: bold;
+            text-transform: uppercase;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            letter-spacing: 0.5px;
         }
 
-        .console-level.info { background: #2196F3; }
-        .console-level.success { background: #4CAF50; }
-        .console-level.warning { background: #FF9800; }
-        .console-level.error { background: #F44336; }
+        .console-level.info { background: #75beff; color: #001e3c; }
+        .console-level.success { background: #4CAF50; color: #ffffff; }
+        .console-level.warning { background: #FF9800; color: #3e2723; }
+        .console-level.error { background: #F44336; color: #ffffff; }
+        .console-level.debug { background: #9c27b0; color: #ffffff; }
+        .console-level.command { background: #607d8b; color: #ffffff; }
 
         .app-window {
             position: fixed;
@@ -296,7 +359,7 @@
     <div class="runtime-container">
         <!-- Header -->
         <div class="header">
-            <div class="logo">🚀 SVG-PWA Runtime v2.0</div>
+            <div class="logo">🚀 Veridock Runtime</div>
             <div class="status">
                 <div class="status-item">
                     <div class="status-dot active"></div>

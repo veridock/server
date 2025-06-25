@@ -1,5 +1,5 @@
 # Makefile - Project automation with Poetry
-.PHONY: help run dev stop clean install update test proto check-poetry check-caddy generate-caddyfile generate-commands hello date
+.PHONY: help run dev stop clean install update test proto check-poetry check-caddy generate-caddyfile generate-commands hello date publish build
 
 # Load environment variables from .env file
 include .env
@@ -22,6 +22,8 @@ help:
 	@echo "  format      - Format code"
 	@echo "  lint        - Lint code"
 	@echo "  typecheck   - Run type checking"
+	@echo "  build       - Build the package"
+	@echo "  publish     - Publish the package to PyPI"
 	@echo "  hello       - Print a hello message"
 	@echo "  date        - Show current date and time"
 
@@ -133,9 +135,22 @@ stop:
 	@$(SCRIPTS_DIR)/stop_services.sh
 
 # Clean up
+# Build the package
+build: check-poetry
+	@echo "Building package..."
+	@poetry version patch
+	@poetry build
+	@echo "\n📦 Package built in dist/ directory"
+
+# Publish the package to PyPI
+publish: check-poetry build
+	@echo "Publishing package to PyPI..."
+	@poetry publish
+	@echo "\n🚀 Package published to PyPI!"
+
 clean:
 	@echo "Cleaning up..."
-	@rm -rf __pycache__ .pytest_cache build dist *.egg-info
+	@rm -rf __pycache__ .pytest_cache build dist *.egg-info .mypy_cache
 	@find . -name "*.pyc" -delete
 	@find . -name "*.pyo" -delete
 	@find . -name "__pycache__" -delete

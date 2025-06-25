@@ -1,14 +1,65 @@
 # Veridock Server
 
-A high-performance Makefile command runner with Caddy web server and gRPC backend.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
+A high-performance, extensible server for executing commands and managing services with a modern web interface.
 
 ## Features
 
-- **Modern Architecture**: Caddy web server with gRPC microservices
-- **RESTful API**: HTTP/JSON endpoints for easy integration
-- **High Performance**: Asynchronous gRPC for command execution
-- **Environment-based Configuration**: Easy configuration via `.env` file
-- **Comprehensive Logging**: Built-in request/response logging and debugging
+- 🚀 **Modern Architecture**: Caddy web server with gRPC microservices
+- 🔄 **Dual API**: Both RESTful HTTP/JSON and high-performance gRPC endpoints
+- ⚡ **High Performance**: Asynchronous execution with optimized command handling
+- ⚙️ **Configuration**: Environment-based configuration with sensible defaults
+- 📊 **Monitoring**: Built-in metrics and logging
+- 🔌 **Extensible**: Easy to add custom commands and services
+- 🔒 **Secure**: Built-in security features and best practices
+
+## Quick Start
+
+### Prerequisites
+
+- Python 3.8 or higher
+- [Poetry](https://python-poetry.org/) (Python package manager)
+- Make
+- Caddy web server (installed automatically)
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/veridock/server.git
+   cd server
+   ```
+
+2. Install dependencies:
+   ```bash
+   make install
+   ```
+   This will:
+   - Set up a Python virtual environment
+   - Install all required dependencies
+   - Install and configure Caddy web server
+
+3. Start the server:
+   ```bash
+   make run
+   ```
+
+4. Access the web interface at [http://localhost:2019](http://localhost:2019)
+
+## Documentation
+
+For detailed documentation, please see the [documentation directory](docs/).
+
+### Key Documentation
+
+- 📚 [Getting Started](docs/getting-started/README.md) - Installation and basic setup
+- 🛠️ [Configuration Guide](docs/getting-started/configuration.md) - Server and service configuration
+- 🚦 [Runtime Environment](docs/guides/runtime.md) - Working with the runtime
+- ⚙️ [Services Guide](docs/guides/services.md) - Creating and managing services
+- 💻 [CLI Reference](docs/guides/cli.md) - Command-line interface documentation
 
 ## Architecture
 
@@ -16,77 +67,45 @@ A high-performance Makefile command runner with Caddy web server and gRPC backen
 ┌─────────────┐     ┌───────────────┐     ┌───────────────┐
 │             │     │               │     │               │
 │   Caddy     │────▶│  HTTP Gateway │────▶│   gRPC Server │
-│  (Port 8088)│     │  (Port 8082)  │     │  (Port 50051) │
+│  (Port 2019)│     │  (Port 8082)  │     │  (Port 50051) │
 │             │     │               │     │               │
 └─────────────┘     └───────────────┘     └───────────────┘
+       │                    │                      │
+       │                    │                      │
+       ▼                    ▼                      ▼
+┌─────────────┐    ┌───────────────┐    ┌────────────────┐
+│  Web UI     │    │  REST API     │    │  gRPC Services  │
+│  (Port 2019)│    │  (Port 8082)  │    │  (Port 50051)   │
+└─────────────┘    └───────────────┘    └────────────────┘
 ```
-
-## Prerequisites
-
-- Python 3.12+
-- Poetry (Python package manager)
-- Make
-- Caddy web server (installed automatically)
-
-## Quick Start
-
-1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   cd veridock/server
-   ```
-
-2. Install dependencies:
-   ```bash
-   make install
-   ```
-
-3. Copy the example environment file and configure as needed:
-   ```bash
-   cp env.example .env
-   ```
-
-4. Start all services:
-   ```bash
-   make run
-   ```
-
-5. Access the API at `http://localhost:8088`
-
-## Configuration
-
-Configure the services using the `.env` file:
-
-```env
-# Server Configuration
-HTTP_PORT=8088
-
-# gRPC Server
-GRPC_HOST=localhost
-GRPC_PORT=50051
-
-# HTTP Gateway
-HTTP_GATEWAY_HOST=0.0.0.0
-HTTP_GATEWAY_PORT=8082
-```
-
-## API Endpoints
-
-- `POST /makefile/run_command` - Execute a Makefile command
-  ```json
-  {
-    "command": "help"
-  }
-  ```
-
-- `POST /run_command` - Alternative endpoint (same as above)
 
 ## Development
 
-- Start development environment:
-  ```bash
-  make dev
-  ```
+### Prerequisites
+
+- Python 3.8+
+- Node.js 16+ (for frontend development)
+- Docker (optional, for containerized development)
+
+### Setup
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/veridock/server.git
+   cd server
+   ```
+
+2. Install development dependencies:
+   ```bash
+   make dev
+   ```
+
+3. Start the development server:
+   ```bash
+   make dev-server
+   ```
+
+### Common Tasks
 
 - Run tests:
   ```bash
@@ -98,6 +117,27 @@ HTTP_GATEWAY_PORT=8082
   make format
   ```
 
+- Lint code:
+  ```bash
+  make lint
+  ```
+
+- Generate documentation:
+  ```bash
+  make docs
+  ```
+
+## Contributing
+
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on how to contribute to this project.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Support
+
+For support, please [open an issue](https://github.com/veridock/server/issues) on GitHub.
 - Lint code:
   ```bash
   make lint
