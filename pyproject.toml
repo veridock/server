@@ -6,9 +6,9 @@ build-backend = "poetry.core.masonry.api"
 name = "veridock"
 version = "0.1.5"
 description = "Veridock - gRPC-powered server management tool"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["Tom Sapletta <info@softreck.dev>"]
 readme = "README.md"
-license = "MIT"
+license = "Apache-2.0"
 packages = [{include = "veridock"}]
 
 [tool.poetry.scripts]

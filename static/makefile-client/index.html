@@ -1,0 +1,272 @@
+{% extends "../includes/_base.html" %}
+
+{% block title %}Makefile gRPC Client - Veridock{% endblock %}
+
+{% block extra_css %}
+<style>
+    .command-container {
+        display: flex;
+        gap: 20px;
+        margin-top: 2rem;
+    }
+    
+    .command-list {
+        flex: 1;
+        border-right: 1px solid var(--border-color);
+        padding-right: 20px;
+    }
+    
+    .command-execute {
+        flex: 2;
+    }
+    
+    .command-item {
+        padding: 10px;
+        margin: 6px 0;
+        cursor: pointer;
+        border-radius: 6px;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        transition: all 0.2s ease;
+    }
+    
+    .command-item:hover {
+        background-color: #f8f9fa;
+        transform: translateX(4px);
+    }
+    
+    #command {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 15px;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        font-family: 'Fira Code', 'Courier New', monospace;
+    }
+    
+    button.run-command {
+        padding: 10px 20px;
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: background-color 0.2s ease;
+    }
+    
+    button.run-command:hover {
+        background-color: var(--secondary-color);
+    }
+    
+    pre {
+        background-color: #282c34;
+        padding: 15px;
+        border-radius: 6px;
+        min-height: 100px;
+        max-height: 500px;
+        overflow-y: auto;
+        color: #abb2bf;
+        font-family: 'Fira Code', 'Courier New', monospace;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        tab-size: 2;
+        line-height: 1.5;
+        margin: 1em 0;
+    }
+
+    .command-output {
+        position: relative;
+        margin-top: 20px;
+    }
+
+    .copy-button {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: #abb2bf;
+        padding: 4px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 13px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        transition: all 0.2s ease;
+    }
+
+    .copy-button:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    .hljs-attr { color: #e06c75; }
+    .hljs-string { color: #98c379; }
+    .hljs-number { color: #d19a66; }
+    .hljs-literal { color: #56b6c2; }
+    
+    h1 {
+        color: var(--primary-color);
+        margin-bottom: 1.5rem;
+    }
+    
+    h2 {
+        color: var(--secondary-color);
+        margin: 1.5rem 0 1rem;
+        font-size: 1.4rem;
+    }
+    
+    .status-message {
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 4px;
+        display: none;
+    }
+    
+    .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Makefile Command Runner</h1>
+
+<div id="status" class="status-message"></div>
+
+<div class="command-container">
+    <div class="command-list">
+        <h2>Available Commands</h2>
+        <div id="commandList">
+            <p>Loading commands...</p>
+        </div>
+    </div>
+    <div class="command-execute">
+        <h2>Execute Command</h2>
+        <input type="text" id="command" placeholder="Enter command or select from the list" />
+        <button class="run-command" onclick="runCommand()">Run Command</button>
+        <h3>Output:</h3>
+        <div class="command-output">
+            <pre id="output">Command output will appear here...</pre>
+            <button class="copy-button" onclick="copyOutput()">Copy</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Available commands - This would typically be fetched from the server
+const availableCommands = [
+    'install',
+    'test',
+    'lint',
+    'format',
+    'clean',
+    'build',
+    'run',
+    'dev',
+    'docker-build',
+    'docker-run'
+];
+
+document.addEventListener('DOMContentLoaded', function() {
+    const commandList = document.getElementById('commandList');
+    commandList.innerHTML = ''; // Clear loading message
+
+    availableCommands.forEach(cmd => {
+        const div = document.createElement('div');
+        div.className = 'command-item';
+        div.textContent = cmd;
+        div.onclick = function() {
+            document.getElementById('command').value = cmd;
+            runCommand();
+        };
+        commandList.appendChild(div);
+    });
+
+    // Add keyboard support
+    const commandInput = document.getElementById('command');
+    commandInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            runCommand();
+        }
+    });
+});
+
+function showStatus(message, type = 'info') {
+    const statusEl = document.getElementById('status');
+    statusEl.textContent = message;
+    statusEl.className = 'status-message ' + type;
+    statusEl.style.display = 'block';
+    
+    // Hide after 5 seconds
+    setTimeout(() => {
+        statusEl.style.display = 'none';
+    }, 5000);
+}
+
+function formatOutput(data) {
+    try {
+        // If the output is a JSON string, parse and format it
+        if (typeof data === 'string' && (data.startsWith('{') || data.startsWith('['))) {
+            const jsonData = JSON.parse(data);
+            return JSON.stringify(jsonData, null, 2);
+        }
+        return data;
+    } catch (e) {
+        return data;
+    }
+}
+
+function copyOutput() {
+    const output = document.getElementById('output');
+    navigator.clipboard.writeText(output.textContent)
+        .then(() => {
+            showStatus('Output copied to clipboard!', 'success');
+        })
+        .catch(err => {
+            console.error('Failed to copy: ', err);
+            showStatus('Failed to copy output', 'error');
+        });
+}
+
+function runCommand() {
+    const command = document.getElementById('command').value.trim();
+    if (!command) {
+        showStatus('Please enter a command', 'error');
+        return;
+    }
+
+    const output = document.getElementById('output');
+    output.textContent = `Running: ${command}\n\n`;
+    
+    // Show loading state
+    output.textContent += 'Executing command, please wait...';
+    
+    // In a real implementation, this would be an API call to your backend
+    // For now, we'll simulate a response after a short delay
+    setTimeout(() => {
+        try {
+            // Simulate command execution
+            const result = {
+                command: command,
+                output: `Command '${command}' executed successfully at ${new Date().toLocaleTimeString()}`,
+                timestamp: new Date().toISOString(),
+                success: true
+            };
+            
+            output.textContent = formatOutput(JSON.stringify(result, null, 2));
+            
+            // Re-apply syntax highlighting
+            document.querySelectorAll('pre code').forEach((block) => {
+                hljs.highlightBlock(block);
+            });
+            
+            showStatus('Command executed successfully!', 'success');
+        } catch (error) {
+            output.textContent = `Error executing command: ${error.message}`;
+            showStatus('Error executing command', 'error');
+        }
+    }, 1000);
+}
+</script>
+{% endblock %}

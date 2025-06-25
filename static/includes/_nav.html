@@ -1,0 +1,57 @@
+<nav class="main-nav">
+    <div class="nav-logo">Veridock</div>
+    <ul class="nav-links">
+        <li><a href="/makefile-client/">Makefile Client</a></li>
+        <li><a href="/ollama-chat/">Ollama Chat</a></li>
+        <li><a href="/runtime-environment/">Runtime Environment</a></li>
+    </ul>
+</nav>
+
+<style>
+.main-nav {
+    background: #1e3c72;
+    padding: 1rem 2rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.nav-logo {
+    color: white;
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.nav-links {
+    display: flex;
+    gap: 1.5rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-links a {
+    color: white;
+    text-decoration: none;
+    padding: 0.5rem 0;
+    position: relative;
+}
+
+.nav-links a:hover {
+    opacity: 0.8;
+}
+
+.nav-links a::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: 0;
+    left: 0;
+    background-color: white;
+    transition: width 0.3s ease;
+}
+
+.nav-links a:hover::after {
+    width: 100%;
+}
+</style>
